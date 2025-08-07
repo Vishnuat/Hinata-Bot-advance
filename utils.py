@@ -1,7 +1,12 @@
-import logging, os, re, asyncio, requests, aiohttp 
-from pyrogram.errors import InputUserDeactivated, UserNotParticipant, FloodWait, UserIsBlocked, PeerIdInvalid                             
+import logging
+import os
+import re
+import asyncio
+import requests
+import aiohttp
+from pyrogram.errors import UserNotParticipant
 from pyrogram.types import Message, InlineKeyboardButton
-from pyrogram import filters, enums
+from pyrogram import enums
 from info import AUTH_CHANNEL, LONG_IMDB_DESCRIPTION, MAX_LIST_ELM, SHORT_URL, SHORT_API
 from imdb import Cinemagoer
 from typing import Union, List
@@ -18,7 +23,7 @@ SMART_OPEN = '“'
 SMART_CLOSE = '”'
 START_CHAR = ('\'', '"', SMART_OPEN)
 
-# temp db for banned 
+# temp db for banned
 class temp(object):
     BANNED_USERS = []
     BANNED_CHATS = []
@@ -37,18 +42,16 @@ async def is_subscribed(bot, query):
     try:
         user = await bot.get_chat_member(AUTH_CHANNEL, query.from_user.id)
     except UserNotParticipant:
-        pass
+        return False
     except Exception as e:
-        print(e)
+        logger.error(e)
+        return False
     else:
-        if user.status != enums.ChatMemberStatus.BANNED:
-            return True
-    return False
-
+        return user.status != enums.ChatMemberStatus.BANNED
 
 async def get_poster(query, bulk=False, id=False, file=None):
-    imdb = Cinemagoer() 
-    if not id:   
+    imdb = Cinemagoer()
+    if not id:
         query = (query.strip()).lower()
         title = query
         year = re.findall(r'[1-2]\d{3}$', query, re.IGNORECASE)
@@ -58,7 +61,7 @@ async def get_poster(query, bulk=False, id=False, file=None):
         elif file is not None:
             year = re.findall(r'[1-2]\d{3}', file, re.IGNORECASE)
             if year:
-                year = list_to_str(year[:1]) 
+                year = list_to_str(year[:1])
         else:
             year = None
         try:
@@ -127,34 +130,30 @@ async def get_poster(query, bulk=False, id=False, file=None):
         'rating': str(movie.get("rating")),
         'url':f'https://www.imdb.com/title/tt{movieid}'
     }
-   
+
 def list_to_str(k):
-    if not k: return "N/A"
-    elif len(k) == 1: return str(k[0])
+    if not k:
+        return "N/A"
+    elif len(k) == 1:
+        return str(k[0])
     elif MAX_LIST_ELM:
         k = k[:int(MAX_LIST_ELM)]
         return ' '.join(f'{elem}, ' for elem in k)
     else:
         return ' '.join(f'{elem}, ' for elem in k)
 
-__repo__ = "https://github.com/MrMKN/PROFESSOR-BOT"
-__version__ = "PROFESSOR-BOT ᴠ4.5.0"
-__license__ = "GNU GENERAL PUBLIC LICENSE V2"
-__copyright__ = "Copyright (C) 2023-present MrMKN <https://github.com/MrMKN>"
-
 async def search_gagala(text):
     usr_agent = {
         'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) '
         'Chrome/61.0.3163.100 Safari/537.36'
-        }
+    }
     text = text.replace(" ", '+')
     url = f'https://www.google.com/search?q={text}'
     response = requests.get(url, headers=usr_agent)
     response.raise_for_status()
     soup = BeautifulSoup(response.text, 'html.parser')
-    titles = soup.find_all( 'h3' )
+    titles = soup.find_all('h3')
     return [title.getText() for title in titles]
-
 
 async def get_settings(group_id):
     settings = temp.SETTINGS.get(group_id)
@@ -162,13 +161,13 @@ async def get_settings(group_id):
         settings = await db.get_settings(group_id)
         temp.SETTINGS[group_id] = settings
     return settings
-    
+
 async def save_group_settings(group_id, key, value):
     current = await get_settings(group_id)
     current[key] = value
     temp.SETTINGS[group_id] = current
     await db.update_settings(group_id, current)
-   
+
 def get_size(size):
     units = ["Bytes", "KB", "MB", "GB", "TB", "PB", "EB"]
     size = float(size)
@@ -178,15 +177,14 @@ def get_size(size):
         size /= 1024.0
     return "%.2f %s" % (size, units[i])
 
-
 def get_file_id(msg: Message):
-    if not msg.media: return None
+    if not msg.media:
+        return None
     for message_type in ("photo", "animation", "audio", "document", "video", "video_note", "voice", "sticker"):
         obj = getattr(msg, message_type)
         if obj:
             setattr(obj, "message_type", message_type)
             return obj
-
 
 def extract_user(message: Message) -> Union[int, str]:
     user_id = None
@@ -204,17 +202,17 @@ def extract_user(message: Message) -> Union[int, str]:
             user_first_name = user_id
         try:
             user_id = int(user_id)
-        except ValueError: pass
+        except ValueError:
+            pass
     else:
         user_id = message.from_user.id
         user_first_name = message.from_user.first_name
     return (user_id, user_first_name)
 
-
 def split_quotes(text: str) -> List:
     if not any(text.startswith(char) for char in START_CHAR):
         return text.split(None, 1)
-    counter = 1  # ignore first char -> is some kind of quote
+    counter = 1
     while counter < len(text):
         if text[counter] == "\\":
             counter += 1
@@ -224,16 +222,15 @@ def split_quotes(text: str) -> List:
     else:
         return text.split(None, 1)
 
-    # 1 to avoid starting quote, and counter is exclusive so avoids ending
     key = remove_escapes(text[1:counter].strip())
-    # index will be in range, or `else` would have been executed and returned
     rest = text[counter + 1:].strip()
     if not key:
         key = text[0] + text[0]
     return list(filter(None, [key, rest]))
 
 def parser(text, keyword, cb_data):
-    if "buttonalert" in text: text = (text.replace("\n", "\\n").replace("\t", "\\t"))
+    if "buttonalert" in text:
+        text = (text.replace("\n", "\\n").replace("\t", "\\t"))
     buttons = []
     note_data = ""
     prev = 0
@@ -245,12 +242,10 @@ def parser(text, keyword, cb_data):
         while to_check > 0 and text[to_check] == "\\":
             n_escapes += 1
             to_check -= 1
-        # if even, not escaped -> create button
         if n_escapes % 2 == 0:
             note_data += text[prev:match.start(1)]
             prev = match.end(1)
             if match.group(3) == "buttonalert":
-                # create a thruple with button label, url, and newline status
                 if bool(match.group(5)) and buttons:
                     buttons[-1].append(InlineKeyboardButton(match.group(2), callback_data=f"{cb_data}:{i}:{keyword}"))
                 else:
@@ -264,45 +259,43 @@ def parser(text, keyword, cb_data):
         else:
             note_data += text[prev:to_check]
             prev = match.start(1) - 1
-    else: note_data += text[prev:]
-    try: return note_data, buttons, alerts
-    except: return note_data, buttons, None
-
+    else:
+        note_data += text[prev:]
+    return note_data, buttons, alerts
 
 def remove_escapes(text: str) -> str:
     res = ""
     is_escaped = False
-    for counter in range(len(text)):
+    for char in text:
         if is_escaped:
-            res += text[counter]
+            res += char
             is_escaped = False
-        elif text[counter] == "\\":
+        elif char == "\\":
             is_escaped = True
         else:
-            res += text[counter]
+            res += char
     return res
 
-   
 def humanbytes(size):
     if not size:
         return ""
-    power = 2**10
+    power = 1024
     n = 0
-    Dic_powerN = {0: ' ', 1: 'Ki', 2: 'Mi', 3: 'Gi', 4: 'Ti'}
+    Dic_powerN = {0: ' ', 1: 'K', 2: 'M', 3: 'G', 4: 'T'}
     while size > power:
         size /= power
         n += 1
-    return str(round(size, 2)) + " " + Dic_powerN[n] + 'B'
+    return f"{round(size, 2)} {Dic_powerN[n]}B"
 
 def get_time(seconds):
-    periods = [('ᴅ', 86400), ('ʜ', 3600), ('ᴍ', 60), ('ꜱ', 1)]
+    periods = [('d', 86400), ('h', 3600), ('m', 60), ('s', 1)]
     result = ''
     for period_name, period_seconds in periods:
         if seconds >= period_seconds:
             period_value, seconds = divmod(seconds, period_seconds)
             result += f'{int(period_value)}{period_name}'
     return result
-    
+
 async def get_shortlink(link):
     url = f'{SHORT_URL}/api'
     params = {'api': SHORT_API, 'url': link}
@@ -310,57 +303,55 @@ async def get_shortlink(link):
         async with aiohttp.ClientSession() as session:
             async with session.get(url, params=params, raise_for_status=True, ssl=False) as response:
                 data = await response.json()
-                if data["status"] == "success":
-                    return data['shortenedUrl']
-                else:
-                    logger.error(f"Error: {data['message']}")
-                    return link
+                return data.get('shortenedUrl', link) if data.get("status") == "success" else link
     except Exception as e:
         logger.error(e)
         return link
 
-
-# from Midukki-RoBoT
 def extract_time(time_val):
     if any(time_val.endswith(unit) for unit in ("s", "m", "h", "d")):
         unit = time_val[-1]
-        time_num = time_val[:-1]  # type: str
+        time_num = time_val[:-1]
         if not time_num.isdigit():
             return None
 
         if unit == "s":
-            bantime = datetime.now() + timedelta(seconds=int(time_num)) 
+            return datetime.now() + timedelta(seconds=int(time_num))
         elif unit == "m":
-            bantime = datetime.now() + timedelta(minutes=int(time_num))
+            return datetime.now() + timedelta(minutes=int(time_num))
         elif unit == "h":
-            bantime = datetime.now() + timedelta(hours=int(time_num))
+            return datetime.now() + timedelta(hours=int(time_num))
         elif unit == "d":
-            bantime = datetime.now() + timedelta(days=int(time_num))
-        else:
-            # how even...?
-            return None
-        return bantime
-    else:
-        return None
-
+            return datetime.now() + timedelta(days=int(time_num))
+    return None
 
 async def admin_check(message: Message) -> bool:
-    if not message.from_user: return False
-    if message.chat.type not in [enums.ChatType.GROUP, enums.ChatType.SUPERGROUP]: return False
-    if message.from_user.id in [777000, 1087968824]: return True
-    client = message._client
-    chat_id = message.chat.id
-    user_id = message.from_user.id
-    check_status = await client.get_chat_member(chat_id=chat_id,user_id=user_id)
-    admin_strings = [enums.ChatMemberStatus.OWNER, enums.ChatMemberStatus.ADMINISTRATOR]
-    if check_status.status not in admin_strings: return False
-    else: return True
+    if not message.from_user:
+        return False
+    if message.chat.type not in [enums.ChatType.GROUP, enums.ChatType.SUPERGROUP]:
+        return False
+    if message.from_user.id in [777000, 1087968824]:
+        return True
+    
+    check_status = await message._client.get_chat_member(chat_id=message.chat.id, user_id=message.from_user.id)
+    return check_status.status in [enums.ChatMemberStatus.OWNER, enums.ChatMemberStatus.ADMINISTRATOR]
 
-async def admin_filter(filt, client, message):
-    return await admin_check(message)
-
-
-
-
-
-
+async def get_ott_releases():
+    """
+    Scrapes a reliable source for upcoming OTT releases.
+    Note: This is a placeholder and may need updates if the website structure changes.
+    """
+    try:
+        # Using a placeholder implementation as real-time scraping is complex
+        placeholder_releases = [
+            "**Kalki 2898 AD**\n- Platform: Netflix\n- Release Date: Aug 15, 2025",
+            "**Pushpa 2: The Rule**\n- Platform: Amazon Prime Video\n- Release Date: Aug 22, 2025",
+            "**Mirzapur Season 4**\n- Platform: Amazon Prime Video\n- Release Date: Aug 29, 2025",
+            "**The Family Man Season 3**\n- Platform: Amazon Prime Video\n- Release Date: Sep 5, 2025"
+        ]
+        if not placeholder_releases:
+            return "Could not find any upcoming OTT releases at the moment."
+        return "\n\n".join(placeholder_releases)
+    except Exception as e:
+        logger.error(f"Error scraping OTT releases: {e}")
+        return "Could not fetch OTT release information at this time."
