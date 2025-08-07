@@ -1,5 +1,6 @@
 import motor.motor_asyncio
-from info import DATABASE_NAME, DATABASE_URL, IMDB, IMDB_TEMPLATE, MELCOW_NEW_USERS, P_TTI_SHOW_OFF, SINGLE_BUTTON, SPELL_CHECK_REPLY, PROTECT_CONTENT, MAX_RIST_BTNS, IMDB_DELET_TIME                  
+from datetime import datetime, timedelta
+from info import DATABASE_NAME, DATABASE_URL, IMDB, IMDB_TEMPLATE, MELCOW_NEW_USERS, P_TTI_SHOW_OFF, SINGLE_BUTTON, SPELL_CHECK_REPLY, PROTECT_CONTENT
 
 class Database:
     
@@ -8,7 +9,8 @@ class Database:
         self.db = self._client[database_name]
         self.col = self.db.users
         self.grp = self.db.groups
-
+        self.queries = self.db.search_queries
+        self.ott = self.db.ott_message
 
     def new_user(self, id, name):
         return dict(
@@ -19,7 +21,6 @@ class Database:
                 ban_reason="",
             ),
         )
-
 
     def new_group(self, id, title, username):
         return dict(
@@ -71,7 +72,6 @@ class Database:
     async def get_all_users(self):
         return self.col.find({})
     
-
     async def delete_user(self, user_id):
         await self.col.delete_many({'id': int(user_id)})
 
@@ -85,18 +85,14 @@ class Database:
         b_users = [user['id'] async for user in users]
         return b_users, b_chats
     
-
-
     async def add_chat(self, chat, title, username):
         chat = self.new_group(chat, title, username)
         await self.grp.insert_one(chat)
     
-
     async def get_chat(self, chat):
         chat = await self.grp.find_one({'id':int(chat)})
         return False if not chat else chat.get('chat_status')
     
-
     async def re_enable_chat(self, id):
         chat_status=dict(
             is_disabled=False,
@@ -107,7 +103,6 @@ class Database:
     async def update_settings(self, id, settings):
         await self.grp.update_one({'id': int(id)}, {'$set': {'settings': settings}})
         
-    
     async def get_settings(self, id):       
         default = {
             'button': SINGLE_BUTTON,
@@ -123,7 +118,6 @@ class Database:
             return chat.get('settings', default)
         return default
 
-
     async def disable_chat(self, chat, reason="No Reason"):
         chat_status=dict(
             is_disabled=True,
@@ -131,18 +125,37 @@ class Database:
             )
         await self.grp.update_one({'id': int(chat)}, {'$set': {'chat_status': chat_status}})
     
-
     async def total_chat_count(self):
         count = await self.grp.count_documents({})
         return count
     
-
     async def get_all_chats(self):
         return self.grp.find({})
-
 
     async def get_db_size(self):
         return (await self.db.command("dbstats"))['dataSize']
 
+    async def log_search(self, query):
+        """Logs a search query to the database."""
+        await self.queries.insert_one({'query': query.lower(), 'timestamp': datetime.utcnow()})
+
+    async def get_trending_searches(self, days=7, limit=10):
+        """Gets the most frequent search queries in the last N days."""
+        start_date = datetime.utcnow() - timedelta(days=days)
+        pipeline = [
+            {'$match': {'timestamp': {'$gte': start_date}}},
+            {'$group': {'_id': '$query', 'count': {'$sum': 1}}},
+            {'$sort': {'count': -1}},
+            {'$limit': limit}
+        ]
+        return await self.queries.aggregate(pipeline).to_list(length=limit)
+
+    async def set_ott_message(self, chat_id, message_id):
+        """Stores the chat and message ID of the editable OTT message."""
+        await self.ott.update_one({'_id': 'ott_message_info'}, {'$set': {'chat_id': chat_id, 'message_id': message_id}}, upsert=True)
+
+    async def get_ott_message(self):
+        """Retrieves the stored OTT message info."""
+        return await self.ott.find_one({'_id': 'ott_message_info'})
 
 db = Database(DATABASE_URL, DATABASE_NAME)
