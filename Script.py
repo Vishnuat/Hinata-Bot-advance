@@ -1,201 +1,179 @@
+class script(object):
+    START_TXT = """<b>👋 Hello {user},
+
+I'm an advanced filter bot with a lot of features.
+
+Add me to your group and I'll help you manage it! 🚀</b>"""
+
+    HELP_TXT = """<b>Here are the available commands:</b>
+
+- `/start`: Check if I'm alive.
+- `/help`: Get this help message.
+- `/about`: Learn more about me.
+- `/connect`: Connect your group to PM.
+- `/disconnect`: Disconnect from a group.
+- `/connections`: View your connections.
+
+**Filters:**
+- `/filter`: Add a filter.
+- `/filters`: View all filters.
+- `/del`: Delete a filter.
+- `/delall`: Delete all filters.
+
+**Admin:**
+- `/stats`: Get bot statistics.
+- `/users`: List all users.
+- `/chats`: List all chats.
+- `/broadcast`: Broadcast a message.
 """
-This script centralizes all configuration variables and text strings for the bot,
-making it easier to manage settings and user-facing messages.
+
+    ABOUT_TXT = """<b>✨ About Me ✨</b>
+
+- **Name:** {bot}
+- **Developer:** [Mr.MKN TG](https://t.me/Mr_MKN)
+- **Language:** Python 3
+- **Framework:** Pyrogram
+- **Database:** MongoDB
+- **Version:** 4.6
 """
-import re
-import time
-from os import environ
 
-id_pattern = re.compile(r'^.\d+$')
+    SOURCE_TXT = """<b>✨ Source Code ✨</b>
 
-def is_enabled(value, default):
-    """
-    Checks if a configuration value is enabled.
-    """
-    if value.strip().lower() in ["on", "true", "yes", "1", "enable", "y"]:
-        return True
-    elif value.strip().lower() in ["off", "false", "no", "0", "disable", "n"]:
-        return False
-    else:
-        return default
+You can find the source code for this bot on GitHub.
 
-# --- PYROCLIENT SETUP ---
-API_ID = int(environ['API_ID'])
-API_HASH = environ['API_HASH']
-BOT_TOKEN = environ['BOT_TOKEN']
+- **Repository:** [PROFESSOR-BOT](https://github.com/MrMKN/PROFESSOR-BOT)
+- **Developer:** [Mr.MKN TG](https://t.me/Mr_MKN)
+"""
 
-# --- BOT SETTINGS ---
-WEB_SUPPORT = is_enabled(environ.get("WEBHOOK", 'True'), True)
-PICS = (environ.get('PICS', 'https://graph.org/file/01ddfcb1e8203879a63d7.jpg https://graph.org/file/d69995d9846fd4ad632b8.jpg')).split()
-UPTIME = time.time()
+    FILE_TXT = """<b>➤ Help For File Store</b>
 
-# --- ADMINS, CHANNELS & USERS ---
-CACHE_TIME = int(environ.get('CACHE_TIME', 300))
-ADMINS = [int(admin) if id_pattern.search(admin) else admin for admin in environ.get('ADMINS', '').split()]
-CHANNELS = [int(ch) if id_pattern.search(ch) else ch for ch in environ.get('CHANNELS', '0').split()]
-auth_users = [int(user) if id_pattern.search(user) else user for user in environ.get('AUTH_USERS', '').split()]
-AUTH_USERS = (auth_users + ADMINS) if auth_users else []
-AUTH_CHANNEL = int(auth_channel) if (auth_channel := environ.get('AUTH_CHANNEL')) and id_pattern.search(auth_channel) else None
-AUTH_GROUPS = [int(ch) for ch in auth_grp.split()] if (auth_grp := environ.get('AUTH_GROUP')) else None
+<i>By using this module, you can store files in my database and I will give you a permanent link to access the saved files.</i>
 
-# --- MONGODB INFORMATION ---
-DATABASE_URL = environ.get('DATABASE_URL', "")
-DATABASE_NAME = environ.get('DATABASE_NAME', "Cluster0")
-FILE_DB_URL = environ.get("FILE_DB_URL", DATABASE_URL)
-FILE_DB_NAME = environ.get("FILE_DB_NAME", DATABASE_NAME)
-COLLECTION_NAME = environ.get('COLLECTION_NAME', 'Telegram_files')
+<b>⪼ Commands & Usage</b>
+➪ `/link`: Reply to any media to get the link.
+➪ `/batch`: Create a link for multiple media.
+"""
 
-# --- FILTERS CONFIGURATION ---
-MAX_RIST_BTNS = int(environ.get('MAX_RIST_BTNS', 10))
-BUTTON_LOCK = is_enabled(environ.get("BUTTON_LOCK", "True"), True)
-PMFILTER = is_enabled(environ.get('PMFILTER', "True"), True)
-G_FILTER = is_enabled(environ.get("G_FILTER", "True"), True)
+    FILTER_TXT = "Select which one you want...✨"
 
-# --- URL SHORTENER ---
-SHORT_URL = environ.get("SHORT_URL")
-SHORT_API = environ.get("SHORT_API")
+    MANUELFILTER_TXT = """<b>Help For Filters</b>
 
-# --- OTHERS ---
-IMDB_DELET_TIME = int(environ.get('IMDB_DELET_TIME', 300))
-LOG_CHANNEL = int(environ.get('LOG_CHANNEL', 0))
-SUPPORT_CHAT = environ.get('SUPPORT_CHAT', 'MKN_BOTZ_DISCUSSION_GROUP')
-P_TTI_SHOW_OFF = is_enabled(environ.get('P_TTI_SHOW_OFF', "True"), True)
-PM_IMDB = is_enabled(environ.get('PM_IMDB', "True"), True)
-IMDB = is_enabled(environ.get('IMDB', "True"), True)
-SINGLE_BUTTON = is_enabled(environ.get('SINGLE_BUTTON', "True"), True)
-CUSTOM_FILE_CAPTION = environ.get("CUSTOM_FILE_CAPTION", "{file_name}")
-BATCH_FILE_CAPTION = environ.get("BATCH_FILE_CAPTION")
-LONG_IMDB_DESCRIPTION = is_enabled(environ.get("LONG_IMDB_DESCRIPTION", "False"), False)
-SPELL_CHECK_REPLY = is_enabled(environ.get("SPELL_CHECK_REPLY", "True"), True)
-MAX_LIST_ELM = int(environ.get("MAX_LIST_ELM", 0))
-FILE_STORE_CHANNEL = [int(ch) for ch in environ.get('FILE_STORE_CHANNEL', '').split()]
-MELCOW_NEW_USERS = is_enabled(environ.get('MELCOW_NEW_USERS', "True"), True)
-PROTECT_CONTENT = is_enabled(environ.get('PROTECT_CONTENT', "False"), False)
-PUBLIC_FILE_STORE = is_enabled(environ.get('PUBLIC_FILE_STORE', "True"), True)
+<i>Filters are a feature where users can set automated replies for a particular keyword.</i>
 
-class Text:
-    START_TXT = "<b>✨ Hᴇʟʟᴏ {user}.\n\nMʏ Nᴀᴍᴇ Is {bot}.\n\nI Cᴀɴ Pʀᴏᴠɪᴅᴇ Mᴏᴠɪᴇs Fᴏʀ Yᴏᴜ. Jᴜsᴛ Aᴅᴅ Mᴇ Tᴏ Yᴏᴜʀ Gʀᴏᴜᴘ Oʀ Jᴏɪɴ Oᴜʀ Gʀᴏᴜᴘ.</b>"
-    HELP_TXT = "Hᴇʏ {}, Hᴇʀᴇ Is Mʏ Hᴇʟᴩ."
-    ABOUT_TXT = """<b>✯ Mʏ ɴᴀᴍᴇ: {}
-✯ Dᴇᴠᴇʟᴏᴩᴇʀ: <a href="https://t.me/Mr_MKN">ᴍʀ.ᴍᴋɴ ᴛɢ</a>
-✯ Cᴏᴅᴇᴅ Oɴ: ᴩʏᴛʜᴏɴ/ᴩʏʀᴏɢʀᴀᴍ
-✯ Mʏ DᴀᴛᴀBᴀꜱᴇ: ᴍᴏɴɢᴏ-ᴅʙ
-✯ Mʏ Sᴇʀᴠᴇʀ: ᴀɴʏᴡʜᴇʀᴇ
-✯ Mʏ Vᴇʀꜱɪᴏɴ: ᴩʀᴏꜰᴇꜱꜱᴏʀ-ʙᴏᴛ ᴠ4.6 (12-05-2025)</b>"""
-    SOURCE_TXT = """<b>NOTE:</b>
-- ꜱᴏᴜʀᴄᴇ ᴄᴏᴅᴇ ʜᴇʀᴇ ◉› :<a href=https://github.com/MrMKN/PROFESSOR-BOT>𝐏𝐑𝐎𝐅𝐄𝐒𝐒𝐎𝐑-𝐁𝐎𝐓</a>
+<b>Note:</b>
+1. The bot should have admin privileges.
+2. Only admins can add filters in a chat.
 
-<b>ᴅᴇᴠ: <a href=https://t.me/Mr_MKN>ᴍʀ.ᴍᴋɴ ᴛɢ</a></b>"""
-    FILE_TXT = """<b>➤ Hᴇʟᴘ Fᴏʀ Fɪʟᴇ Sᴛᴏʀᴇ</b>
+<b>Commands & Usage:</b>
+- `/filter`: Add a filter in a chat.
+- `/filters`: List all the filters of a chat.
+- `/del`: Delete a specific filter in a chat.
+- `/delall`: Delete all filters in a chat (Owner Only).
+"""
 
-<i>Bʏ Usɪɴɢ Tʜɪs Mᴏᴅᴜʟᴇ Yᴏᴜ Cᴀɴ Sᴛᴏʀᴇ Fɪʟᴇs Iɴ Mʏ Dᴀᴛᴀʙᴀsᴇ Aɴᴅ I Wɪʟʟ Gɪᴠᴇ Yᴏᴜ A Pᴇʀᴍᴀɴᴇɴᴛ Lɪɴᴋ Tᴏ Aᴄᴄᴇss Tʜᴇ Sᴀᴠᴇᴅ Fɪʟᴇs.</i>
+    BUTTON_TXT = """<b>Help For Buttons</b>
 
-<b>⪼ Cᴏᴍᴍᴀɴᴅ & Usᴀɢᴇ</b>
-➪ /link › Rᴇᴘʟʏ Tᴏ Aɴʏ Mᴇᴅɪᴀ Tᴏ Gᴇᴛ Tʜᴇ Lɪɴᴋ
-➪ /batch › Tᴏ Cʀᴇᴀᴛᴇ Lɪɴᴋ Fᴏʀ Mᴜʟᴛɪᴘʟᴇ Mᴇᴅɪᴀ"""
-    FILTER_TXT = "Sᴇʟᴇᴄᴛ Wʜɪᴄʜ Oɴᴇ Yᴏᴜ Wᴀɴᴛ...✨"
-    MANUELFILTER_TXT = """<b>Hᴇʟᴘ Fᴏʀ Fɪʟᴛᴇʀs</b>
+<i>This bot supports both URL and alert inline buttons.</i>
 
-<i>Fɪʟᴛᴇʀ Is Tʜᴇ Fᴇᴀᴛᴜʀᴇ Wʜᴇʀᴇ Usᴇʀs Cᴀɴ Sᴇᴛ Aᴜᴛᴏᴍᴀᴛᴇᴅ Rᴇᴘʟɪᴇs Fᴏʀ A Pᴀʀᴛɪᴄᴜʟᴀʀ Kᴇʏᴡᴏʀᴅ.</i>
+<b>Note:</b>
+1. Telegram will not allow you to send buttons without content, so content is mandatory.
+2. Buttons should be properly parsed as Markdown format.
+"""
 
-<b>Nᴏᴛᴇ:</b>
-1. Tʜɪs Bᴏᴛ Sʜᴏᴜʟᴅ Hᴀᴠᴇ Aᴅᴍɪɴ Pʀɪᴠɪʟᴇɢᴇs.
-2. Oɴʟʏ Aᴅᴍɪɴs Cᴀɴ Aᴅᴅ Fɪʟᴛᴇʀs Iɴ A Cʜᴀᴛ.
+    AUTOFILTER_TXT = """<b>Help For AutoFilter</b>
 
-<b>Cᴏᴍᴍᴀɴᴅs Aɴᴅ Usᴀɢᴇ:</b>
-• /filter - Aᴅᴅ A Fɪʟᴛᴇʀ Iɴ Cʜᴀᴛ
-• /filters - Lɪsᴛ Aʟʟ Tʜᴇ Fɪʟᴛᴇʀs Oғ A Cʜᴀᴛ
-• /del - Dᴇʟᴇᴛᴇ A Sᴘᴇᴄɪғɪᴄ Fɪʟᴛᴇʀ Iɴ Cʜᴀᴛ
-• /delall - Dᴇʟᴇᴛᴇ Aʟʟ Fɪʟᴛᴇʀs Iɴ A Cʜᴀᴛ (Oᴡɴᴇʀ Oɴʟʏ)"""
-    BUTTON_TXT = """<b>Hᴇʟᴘ Fᴏʀ Bᴜᴛᴛᴏɴs</b>
+<i>Auto Filter is a feature to filter and save files automatically from a channel to a group.</i>
 
-<i>Tʜɪs Bᴏᴛ Sᴜᴘᴘᴏʀᴛs Bᴏᴛʜ Uʀʟ Aɴᴅ Aʟᴇʀᴛ Iɴʟɪɴᴇ Bᴜᴛᴛᴏɴs.</i>
+- `/autofilter on`: Enable autofilter.
+- `/autofilter off`: Disable autofilter.
+"""
 
-<b>Nᴏᴛᴇ:</b>
-1. Tᴇʟᴇɢʀᴀᴍ Wɪʟʟ Nᴏᴛ Aʟʟᴏᴡ Yᴏᴜ Tᴏ Sᴇɴᴅ Bᴜᴛᴛᴏɴs Wɪᴛʜᴏᴜᴛ Cᴏɴᴛᴇɴᴛ, Sᴏ Cᴏɴᴛᴇɴᴛ Is Mᴀɴᴅᴀᴛᴏʀʏ.
-2. Bᴜᴛᴛᴏɴs Sʜᴏᴜʟᴅ Bᴇ Pʀᴏᴘᴇʀʟʏ Pᴀʀsᴇᴅ As Mᴀʀᴋᴅᴏᴡɴ Fᴏʀᴍᴀᴛ."""
-    AUTOFILTER_TXT = """<b>Hᴇʟᴘ Fᴏʀ AᴜᴛᴏFɪʟᴛᴇʀ</b>
+    CONNECTION_TXT = """<b>Help For Connections</b>
 
-<i>Aᴜᴛᴏ Fɪʟᴛᴇʀ Is Tʜᴇ Fᴇᴀᴛᴜʀᴇ Tᴏ Fɪʟᴛᴇʀ & Sᴀᴠᴇ Fɪʟᴇs Aᴜᴛᴏᴍᴀᴛɪᴄᴀʟʟʏ Fʀᴏᴍ Cʜᴀɴɴᴇʟ Tᴏ Gʀᴏᴜᴘ.</i>
+<i>Used to connect the bot to PM for managing filters.</i>
 
-• /autofilter on - Enable autofilter.
-• /autofilter off - Disable autofilter."""
-    CONNECTION_TXT = """<b>Hᴇʟᴘ Fᴏʀ Cᴏɴɴᴇᴄᴛɪᴏɴs</b>
+<b>Commands & Usage:</b>
+- `/connect`: Connect a chat to your PM.
+- `/disconnect`: Disconnect from a chat.
+- `/connections`: List all your connections.
+"""
 
-<i>Usᴇᴅ Tᴏ Cᴏɴɴᴇᴄᴛ Tʜᴇ Bᴏᴛ Tᴏ PM Fᴏʀ Mᴀɴᴀɢɪɴɢ Fɪʟᴛᴇʀs.</i>
+    ADMIN_TXT = """<b>Help For Admins</b>
 
-<b>Cᴏᴍᴍᴀɴᴅs Aɴᴅ Usᴀɢᴇ:</b>
-• /connect - Cᴏɴɴᴇᴄᴛ A Cʜᴀᴛ Tᴏ Yᴏᴜʀ PM
-• /disconnect - Dɪsᴄᴏɴɴᴇᴄᴛ Fʀᴏᴍ A Cʜᴀᴛ
-• /connections - Lɪsᴛ Aʟʟ Yᴏᴜʀ Cᴏɴɴᴇᴄᴛɪᴏɴs"""
-    ADMIN_TXT = """<b>Hᴇʟᴩ Fᴏʀ Aᴅᴍɪɴꜱ</b>
+<i>This module only works for admins.</i>
 
-<i>Tʜɪs Mᴏᴅᴜʟᴇ Oɴʟʏ Wᴏʀᴋs Fᴏʀ Aᴅᴍɪɴs.</i>
+<b>Commands & Usage:</b>
+- `/logs`: Get recent errors.
+- `/delete`: Delete a file from the database.
+- `/users`: Get a list of users.
+- `/chats`: Get a list of chats.
+- `/broadcast`: Broadcast a message to all users.
+- `/leave`: Leave a chat.
+- `/disable`: Disable a chat.
+- `/ban_user`: Ban a user.
+- `/unban_user`: Unban a user.
+- `/restart`: Restart the bot.
+"""
 
-<b>Cᴏᴍᴍᴀɴᴅ & Uꜱᴀɢᴇ</b>
-• /logs - Gᴇᴛ Rᴇᴄᴇɴᴛ Eʀʀᴏʀꜱ
-• /delete - Dᴇʟᴇᴛᴇ A Fɪʟᴇ Fʀᴏᴍ DB
-• /users - Gᴇᴛ Lɪꜱᴛ Oꜰ Uꜱᴇʀꜱ
-• /chats - Gᴇᴛ Lɪꜱᴛ Oꜰ Cʜᴀᴛꜱ
-• /broadcast - Bʀᴏᴀᴅᴄᴀꜱᴛ A Mᴇꜱꜱᴀɢᴇ Tᴏ Aʟʟ Uꜱᴇʀꜱ
-• /leave - Lᴇᴀᴠᴇ Fʀᴏᴍ A Cʜᴀᴛ
-• /disable - Dɪꜱᴀʙʟᴇ A Cʜᴀᴛ
-• /ban_user - Bᴀɴ A Uꜱᴇʀ
-• /unban_user - Uɴʙᴀɴ A Uꜱᴇʀ
-• /restart - Rᴇsᴛᴀʀᴛ Tʜᴇ Bᴏᴛ"""
-    STATUS_TXT = """<b>◉ ᴛᴏᴛᴀʟ ꜰɪʟᴇꜱ: <code>{}</code>
-◉ ᴛᴏᴛᴀʟ ᴜꜱᴇʀꜱ: <code>{}</code>
-◉ ᴛᴏᴛᴀʟ ᴄʜᴀṭꜱ: <code>{}</code>
-◉ ᴜꜱᴇᴅ ᴅʙ ꜱɪᴢᴇ: <code>{}</code>
-◉ ꜰʀᴇᴇ ᴅʙ ꜱɪᴢᴇ: <code>{}</code></b>"""
-    LOG_TEXT_G = """<b>#ɴᴇᴡ_ɢʀᴏᴜᴩ
+    STATUS_TXT = """<b>◉ Total Files:</b> <code>{}</code>
+<b>◉ Total Users:</b> <code>{}</code>
+<b>◉ Total Chats:</b> <code>{}</code>
+<b>◉ Used DB Size:</b> <code>{}</code>
+<b>◉ Free DB Size:</b> <code>{}</code>"""
 
-◉ ɢʀᴏᴜᴩ: {a}
-◉ ɢ-ɪᴅ: <code>{b}</code>
-◉ ʟɪɴᴋ: @{c}
-◉ ᴍᴇᴍʙᴇʀꜱ: <code>{d}</code>
-◉ ᴀᴅᴅᴇᴅ ʙʏ: {e}
+    LOG_TEXT_G = """<b>#NewGroup</b>
 
-◉ ʙʏ: @{f}</b>"""
-    LOG_TEXT_P = """#ɴᴇᴡ_ᴜꜱᴇʀ
+- **Group:** {a}
+- **ID:** `{b}`
+- **Link:** @{c}
+- **Members:** `{d}`
+- **Added By:** {e}
+- **Bot:** @{f}
+"""
 
-◉ ᴜꜱᴇʀ-ɪᴅ: <code>{}</code>
-◉ ᴀᴄᴄ-ɴᴀᴍᴇ: {}
-◉ ᴜꜱᴇʀɴᴀᴍᴇ: @{}
+    LOG_TEXT_P = """<b>#NewUser</b>
 
-◉ ʙʏ: @{}</b>"""
-    EXTRAMOD_TXT = """<b>Hᴇʟᴩ Fᴏʀ Exᴛʀᴀ Mᴏᴅᴜʟᴇs</b>
+- **ID:** `{}`
+- **Name:** {}
+- **Username:** @{}
+- **Bot:** @{}
+"""
 
-<i>Jᴜꜱᴛ Sᴇɴᴅ Aɴʏ Iᴍᴀɢᴇ Tᴏ Eᴅɪᴛ Iᴍᴀɢᴇ.</i>
+    EXTRAMOD_TXT = """<b>Help For Extra Modules</b>
 
-<b>Cᴏᴍᴍᴀɴᴅꜱ & Uꜱᴀɢᴇ:</b>
-• /id - Gᴇᴛ Iᴅ Oғ A Usᴇʀ
-• /info - Gᴇᴛ Iɴғᴏʀᴍᴀᴛɪᴏɴ Aʙᴏᴜᴛ A Usᴇʀ
-• /imdb - Gᴇᴛ Fɪʟᴍ Iɴғᴏʀᴍᴀᴛɪᴏɴ
-• /tts - Cᴏɴᴠᴇʀᴛ Tᴇxᴛ Tᴏ Sᴘᴇᴇᴄʜ
-• /json - Gᴇᴛ Mᴇꜱꜱᴀɢᴇ Iɴꜰᴏ
-• /telegraph - Uᴘʟᴏᴀᴅ Iᴍᴀɢᴇ Oʀ Vɪᴅᴇᴏ Tᴏ Tᴇʟᴇɢʀᴀᴘʜ"""
-    CREATOR_REQUIRED = "❗<b>Yᴏᴜ Hᴀᴠᴇ Tᴏ Bᴇ Tʜᴇ Gʀᴏᴜᴩ Cʀᴇᴀᴛᴏʀ Tᴏ Dᴏ Tʜᴀᴛ.</b>"
-    INPUT_REQUIRED = "❗ **Aʀɢᴜᴍᴇɴᴛ Rᴇǫᴜɪʀᴇᴅ.**"
-    KICKED = "✔️ Sᴜᴄᴄᴇꜱꜱꜰᴜʟʟʏ Kɪᴄᴋᴇᴅ {} Mᴇᴍʙᴇʀꜱ."
-    START_KICK = "Rᴇᴍᴏᴠɪɴɢ Iɴᴀᴄᴛɪᴠᴇ Mᴇᴍʙᴇʀs..."
-    ADMIN_REQUIRED = "❗<b>I'ᴍ Nᴏᴛ Aɴ Aᴅᴍɪɴ Hᴇʀᴇ.</b>"
-    DKICK = "✔️ Kɪᴄᴋᴇᴅ {} Dᴇʟᴇᴛᴇᴅ Aᴄᴄᴏᴜɴᴛꜱ."
-    FETCHING_INFO = "<b>Wᴀɪᴛ, I'ᴍ Gᴇᴛᴛɪɴɢ Tʜᴇ Iɴꜰᴏ...</b>"
-    SERVER_STATS = """Sᴇʀᴠᴇʀ Sᴛᴀᴛꜱ:
+<i>Just send any image to edit it.</i>
 
-Uᴩᴛɪᴍᴇ: {}
-CPU Uꜱᴀɢᴇ: {}%
-RAM Uꜱᴀɢᴇ: {}%
-Tᴏᴛᴀʟ Dɪꜱᴋ: {}
-Uꜱᴇᴅ Dɪꜱᴋ: {} ({}%)
-Fʀᴇᴇ Dɪꜱᴋ: {}"""
-    BUTTON_LOCK_TEXT = "Hᴇʏ {}, Tʜɪꜱ Iꜱ Nᴏᴛ Fᴏʀ Yᴏᴜ."
-    FORCE_SUB_TEXT = "Sᴏʀʀʏ, Yᴏᴜ Hᴀᴠᴇ Tᴏ Jᴏɪɴ Mʏ Cʜᴀɴɴᴇʟ Tᴏ Usᴇ Mᴇ."
-    WELCOM_TEXT = "Hᴇʏ {} 👋, Wᴇʟᴄᴏᴍᴇ Tᴏ {}."
-    IMDB_TEMPLATE = """<b>Qᴜᴇʀʏ: {query}</b>
+<b>Commands & Usage:</b>
+- `/id`: Get the ID of a user.
+- `/info`: Get information about a user.
+- `/imdb`: Get film information.
+- `/tts`: Convert text to speech.
+- `/json`: Get message info.
+- `/telegraph`: Upload an image or video to Telegra.ph.
+"""
 
-🏷 Tɪᴛʟᴇ: <a href={url}>{title}</a>
-🎭 Gᴇɴʀᴇꜱ: {genres}
-📆 Yᴇᴀʀ: <a href={url}/releaseinfo>{year}</a>
-🌟 Rᴀᴛɪɴɢ: <a href={url}/ratings>{rating}</a>/10"""
+    CREATOR_REQUIRED = "❗<b>You have to be the group creator to do that.</b>"
+    INPUT_REQUIRED = "❗ **Argument required.**"
+    KICKED = "✔️ Successfully kicked {} members."
+    START_KICK = "Removing inactive members..."
+    ADMIN_REQUIRED = "❗<b>I'm not an admin here.</b>"
+    DKICK = "✔️ Kicked {} deleted accounts."
+    FETCHING_INFO = "<b>Wait, I'm getting the info...</b>"
+    SERVER_STATS = """<b>Server Stats:</b>
+
+- **Uptime:** {}
+- **CPU Usage:** {}%
+- **RAM Usage:** {}%
+- **Total Disk:** {}
+- **Used Disk:** {} ({}%)
+- **Free Disk:** {}"""
+
+    BUTTON_LOCK_TEXT = "Hey {}, this is not for you."
+    FORCE_SUB_TEXT = "Sorry, you have to join my channel to use me."
+    WELCOM_TEXT = "Hey {} 👋, welcome to {}."
+    IMDB_TEMPLATE = """<b>Query: {query}</b>
+
+- **Title:** <a href={url}>{title}</a>
+- **Genres:** {genres}
+- **Year:** <a href={url}/releaseinfo>{year}</a>
+- **Rating:** <a href={url}/ratings>{rating}</a>/10"""
