@@ -11,6 +11,7 @@ class Database:
         self.grp = self.db.groups
         self.queries = self.db.search_queries
         self.ott = self.db.ott_message
+        self.req = self.db.requests # New collection for requests
 
     def new_user(self, id, name):
         return dict(
@@ -136,11 +137,9 @@ class Database:
         return (await self.db.command("dbstats"))['dataSize']
 
     async def log_search(self, query):
-        """Logs a search query to the database."""
         await self.queries.insert_one({'query': query.lower(), 'timestamp': datetime.utcnow()})
 
     async def get_trending_searches(self, days=7, limit=10):
-        """Gets the most frequent search queries in the last N days."""
         start_date = datetime.utcnow() - timedelta(days=days)
         pipeline = [
             {'$match': {'timestamp': {'$gte': start_date}}},
@@ -151,11 +150,28 @@ class Database:
         return await self.queries.aggregate(pipeline).to_list(length=limit)
 
     async def set_ott_message(self, chat_id, message_id):
-        """Stores the chat and message ID of the editable OTT message."""
         await self.ott.update_one({'_id': 'ott_message_info'}, {'$set': {'chat_id': chat_id, 'message_id': message_id}}, upsert=True)
 
     async def get_ott_message(self):
-        """Retrieves the stored OTT message info."""
         return await self.ott.find_one({'_id': 'ott_message_info'})
+        
+    # New functions for handling movie requests
+    async def add_request(self, chat_id, user_id, query):
+        """Saves a movie request to the database."""
+        request = {
+            'chat_id': chat_id,
+            'user_id': user_id,
+            'query': query,
+            'timestamp': datetime.utcnow()
+        }
+        await self.req.insert_one(request)
+
+    async def get_all_requests(self):
+        """Gets all movie requests from the database."""
+        return self.req.find({}).sort('timestamp', -1)
+
+    async def delete_all_requests(self):
+        """Clears all movie requests from the database."""
+        await self.req.delete_many({})
 
 db = Database(DATABASE_URL, DATABASE_NAME)
