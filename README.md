@@ -13,7 +13,7 @@ A new page will open. In the input field, type the following command:
 
 Bash
 
-'''python3 create_index.py'''
+```python3 create_index.py```
 Click the "Run" button next to the input field.
 
 Heroku will then execute the script. You will see the output in the console window below, and it will show a message like "Text index created successfully!" when it is finished.
