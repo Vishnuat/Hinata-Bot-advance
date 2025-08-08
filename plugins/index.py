@@ -18,6 +18,12 @@ lock = asyncio.Lock()
 file_batch = []
 BATCH_SIZE = 200  # Number of files to save in one batch
 
+# --- CHANGE IS HERE ---
+# List of keywords to exclude from indexing
+EXCLUDE_KEYWORDS = ['dvdrip', 'predvd', 'hqclean', 'camrip', 'pre-hd', 'hdts']
+# --- END OF CHANGE ---
+
+
 async def save_file_batch():
     """Saves a batch of files to the database using a bulk write operation."""
     global file_batch
@@ -46,6 +52,13 @@ async def media(bot, message):
     # Prepare file document
     file_id, file_ref = unpack_new_file_id(media.file_id)
     file_name = re.sub(r"@\w+|(_|\-|\.|\+)", " ", str(getattr(media, "file_name", "")))
+    
+    # --- CHANGE IS HERE ---
+    # Check if any of the exclude keywords are in the file name
+    if any(keyword in file_name.lower() for keyword in EXCLUDE_KEYWORDS):
+        logger.info(f"Skipped file due to excluded keyword: {file_name}")
+        return
+    # --- END OF CHANGE ---
 
     file_doc = {
         '_id': file_id,
@@ -115,11 +128,11 @@ async def index_files(bot, query):
         pass
     await index_files_to_db(int(lst_msg_id), chat, msg, bot)
 
-@Client.on_message((filters.forwarded | (filters.regex("(https://)?(t\.me/|telegram\.me/|telegram\.dog/)(c/)?(\d+|[a-zA-Z_0-9]+)/(\d+)$")) & filters.text) & filters.private & filters.incoming & filters.user(ADMINS))
+@Client.on_message((filters.forwarded | (filters.regex("(https://)?(t\.me/|telegram\.me/|telegram\.dog/)(c/)?(\d+|[a-zA-Z_0_9]+)/(\d+)$")) & filters.text) & filters.private & filters.incoming & filters.user(ADMINS))
 async def send_for_index(bot, message):
     # Logic to handle index command remains the same
     if message.text:
-        regex = re.compile("(https://)?(t\.me/|telegram\.me/|telegram\.dog/)(c/)?(\d+|[a-zA-Z_0-9]+)/(\d+)$")
+        regex = re.compile("(https://)?(t\.me/|telegram\.me/|telegram\.dog/)(c/)?(\d+|[a-zA-Z_0_9]+)/(\d+)$")
         match = regex.match(message.text)
         if not match: return await message.reply('Invalid link')
         chat_id = match.group(4)
@@ -210,6 +223,13 @@ async def index_files_to_db(lst_msg_id, chat, msg, bot):
                 # Prepare file document for batching
                 file_id, file_ref = unpack_new_file_id(media.file_id)
                 file_name = re.sub(r"@\w+|(_|\-|\.|\+)", " ", str(getattr(media, "file_name", "")))
+                
+                # --- CHANGE IS HERE ---
+                # Check if any of the exclude keywords are in the file name
+                if any(keyword in file_name.lower() for keyword in EXCLUDE_KEYWORDS):
+                    logger.info(f"Skipped file due to excluded keyword: {file_name}")
+                    continue
+                # --- END OF CHANGE ---
 
                 file_doc = {
                     '_id': file_id,
