@@ -1,77 +1,176 @@
-import re, time
-from os import environ
-from Script import script 
 
-id_pattern = re.compile(r'^.\d+$')
-
-def is_enabled(value, default):
-    if value.strip().lower() in ["on", "true", "yes", "1", "enable", "y"]: return True
-    elif value.strip().lower() in ["off", "false", "no", "0", "disable", "n"]: return False
-    else: return default
-
-
-# PyroClient Setup 
-API_ID = int(environ['API_ID'])
-API_HASH = environ['API_HASH']
-BOT_TOKEN = environ['BOT_TOKEN']
-
-# Bot settings
-WEB_SUPPORT = bool(environ.get("WEBHOOK", 'True')) # for web support on/off
-PICS = (environ.get('PICS' ,'https://telegra.ph/file/2d652451e8e91406da83e.jpg https://telegra.ph/file/7625fbb4e64735b2e812a.jpg https://telegra.ph/file/062642a3fee524b390320.jpg https://telegra.ph/file/c0998916f73d307ba5774.jpg https://telegra.ph/file/d3369acb79e7afe718562.jpg https://telegra.ph/file/c023c83aebde286635981.jpg https://telegra.ph/file/4274f6fa0f25708b0236e.jpg https://telegra.ph/file/388094cad0f780364ef6e.jpg https://telegra.ph/file/68cab92c3d0a6a81bbe16.jpg')).split()
-UPTIME = time.time()
-
-# Admins, Channels & Users
-CACHE_TIME = int(environ.get('CACHE_TIME', 200))
-ADMINS = [int(admin) if id_pattern.search(admin) else admin for admin in environ.get('ADMINS', '5948112774').split()]
-CHANNELS = [int(ch) if id_pattern.search(ch) else ch for ch in environ.get('CHANNELS', '-1002543825202').split()]
-UPDATE_CHANNEL = int(environ.get('UPDATE_CHANNEL', -1002837265401))
-auth_users = [int(user) if id_pattern.search(user) else user for user in environ.get('AUTH_USERS', '').split()]
-AUTH_USERS = (auth_users + ADMINS) if auth_users else []
-auth_channel = environ.get('AUTH_CHANNEL')
-auth_grp = environ.get('AUTH_GROUP')
-AUTH_CHANNEL = int(auth_channel) if auth_channel and id_pattern.search(auth_channel) else None
-AUTH_GROUPS = [int(ch) for ch in auth_grp.split()] if auth_grp else None
-
-# MongoDB information
-DATABASE_URL = environ.get('DATABASE_URL', "")
-DATABASE_NAME = environ.get('DATABASE_NAME', "Cluster0")
-FILE_DB_URL = environ.get("FILE_DB_URL", DATABASE_URL)
-FILE_DB_NAME = environ.get("FILE_DB_NAME", DATABASE_NAME)
-COLLECTION_NAME = environ.get('COLLECTION_NAME', 'Telegram_files')
-
-# Filters Configuration 
-MAX_RIST_BTNS = int(environ.get('MAX_RIST_BTNS', "10"))
-START_MESSAGE = environ.get('START_MESSAGE', script.START_TXT)
-BUTTON_LOCK_TEXT = environ.get("BUTTON_LOCK_TEXT", script.BUTTON_LOCK_TEXT)
-FORCE_SUB_TEXT = environ.get('FORCE_SUB_TEXT', script.FORCE_SUB_TEXT)
-AUTO_POST = is_enabled(environ.get('AUTO_POST', "True"), True)
-WELCOM_PIC = environ.get("WELCOM_PIC", "")
-WELCOM_TEXT = environ.get("WELCOM_TEXT", script.WELCOM_TEXT)
-PMFILTER = is_enabled(environ.get('PMFILTER', "True"), True)
-G_FILTER = is_enabled(environ.get("G_FILTER", "True"), True)
-BUTTON_LOCK = is_enabled(environ.get("BUTTON_LOCK", "True"), True)
-RemoveBG_API = environ.get("RemoveBG_API", "")
-
-# url shortner
-SHORT_URL = environ.get("SHORT_URL")
-SHORT_API = environ.get("SHORT_API")
-
-# Others
-IMDB_DELET_TIME = int(environ.get('IMDB_DELET_TIME', "120"))
-LOG_CHANNEL = int(environ.get('LOG_CHANNEL', -1002811508176))
-SUPPORT_CHAT = environ.get('SUPPORT_CHAT', 'VC_Movie')
-P_TTI_SHOW_OFF = is_enabled(environ.get('P_TTI_SHOW_OFF', "True"), True)
-PM_IMDB = is_enabled(environ.get('PM_IMDB', "True"), True)
-IMDB = is_enabled(environ.get('IMDB', "True"), True)
-SINGLE_BUTTON = is_enabled(environ.get('SINGLE_BUTTON', "True"), True)
-CUSTOM_FILE_CAPTION = environ.get("CUSTOM_FILE_CAPTION", "{file_name}")
-BATCH_FILE_CAPTION = environ.get("BATCH_FILE_CAPTION", None)
-IMDB_TEMPLATE = environ.get("IMDB_TEMPLATE", script.IMDB_TEMPLATE)
-LONG_IMDB_DESCRIPTION = is_enabled(environ.get("LONG_IMDB_DESCRIPTION", "False"), False)
-SPELL_CHECK_REPLY = is_enabled(environ.get("SPELL_CHECK_REPLY", "True"), True)
-MAX_LIST_ELM = environ.get("MAX_LIST_ELM", None)
-FILE_STORE_CHANNEL = [int(ch) for ch in (environ.get('FILE_STORE_CHANNEL', '')).split()]
-MELCOW_NEW_USERS = is_enabled(environ.get('MELCOW_NEW_USERS', "True"), True)
-PROTECT_CONTENT = is_enabled(environ.get('PROTECT_CONTENT', "False"), False)
-PUBLIC_FILE_STORE = is_enabled(environ.get('PUBLIC_FILE_STORE', "True"), True)
-LOG_MSG = "{} Iꜱ Rᴇsᴛᴀʀᴛᴇᴅ....✨\n\n🗓️ Dᴀᴛᴇ : {}\n⏰ Tɪᴍᴇ : {}\n\n🖥️ Rᴇᴏᴩ: {}\n🉐 Vᴇʀsɪᴏɴ: {}\n🧾 Lɪᴄᴇɴꜱᴇ: {}\n©️ Cᴏᴩʏʀɪɢʜᴛ: {}"
+import motor.motor_asyncio
+from datetime import datetime, timedelta
+from info import DATABASE_NAME, DATABASE_URL, IMDB, IMDB_TEMPLATE, MELCOW_NEW_USERS, P_TTI_SHOW_OFF, SINGLE_BUTTON, SPELL_CHECK_REPLY, PROTECT_CONTENT
+class Database:
+    
+    def __init__(self, uri, database_name):
+        self._client = motor.motor_asyncio.AsyncIOMotorClient(uri)
+        self.db = self._client[database_name]
+        self.col = self.db.users
+        self.grp = self.db.groups
+        self.queries = self.db.search_queries
+        self.ott = self.db.ott_message
+        self.req = self.db.requests # New collection for requests
+    def new_user(self, id, name):
+        return dict(
+            id = id,
+            name = name,
+            ban_status=dict(
+                is_banned=False,
+                ban_reason="",
+            ),
+        )
+    def new_group(self, id, title, username):
+        return dict(
+            id = id,
+            title = title,
+            username = username,
+            chat_status=dict(
+                is_disabled=False,
+                reason="",
+            ),
+        )
+    
+    async def add_user(self, id, name):
+        user = self.new_user(id, name)
+        await self.col.insert_one(user)
+    
+    async def is_user_exist(self, id):
+        user = await self.col.find_one({'id':int(id)})
+        return bool(user)
+    
+    async def total_users_count(self):
+        count = await self.col.count_documents({})
+        return count
+    
+    async def remove_ban(self, id):
+        ban_status = dict(
+            is_banned=False,
+            ban_reason=''
+        )
+        await self.col.update_one({'id': id}, {'$set': {'ban_status': ban_status}})
+    
+    async def ban_user(self, user_id, ban_reason="No Reason"):
+        ban_status = dict(
+            is_banned=True,
+            ban_reason=ban_reason
+        )
+        await self.col.update_one({'id': user_id}, {'$set': {'ban_status': ban_status}})
+    async def get_ban_status(self, id):
+        default = dict(
+            is_banned=False,
+            ban_reason=''
+        )
+        user = await self.col.find_one({'id':int(id)})
+        if not user:
+            return default
+        return user.get('ban_status', default)
+    async def get_all_users(self):
+        return self.col.find({})
+    
+    async def delete_user(self, user_id):
+        await self.col.delete_many({'id': int(user_id)})
+    async def delete_chat(self, chat_id):
+        await self.grp.delete_many({'id': int(chat_id)})
+    async def get_banned(self):
+        users = self.col.find({'ban_status.is_banned': True})
+        chats = self.grp.find({'chat_status.is_disabled': True})
+        b_chats = [chat['id'] async for chat in chats]
+        b_users = [user['id'] async for user in users]
+        return b_users, b_chats
+    
+    async def add_chat(self, chat, title, username):
+        chat = self.new_group(chat, title, username)
+        await self.grp.insert_one(chat)
+    
+    async def get_chat(self, chat):
+        chat = await self.grp.find_one({'id':int(chat)})
+        return False if not chat else chat.get('chat_status')
+    
+    async def re_enable_chat(self, id):
+        chat_status=dict(
+            is_disabled=False,
+            reason="",
+            )
+        await self.grp.update_one({'id': int(id)}, {'$set': {'chat_status': chat_status}})
+        
+    async def update_settings(self, id, settings):
+        await self.grp.update_one({'id': int(id)}, {'$set': {'settings': settings}})
+        
+    async def get_settings(self, id):       
+        default = {
+            'button': SINGLE_BUTTON,
+            'botpm': P_TTI_SHOW_OFF,
+            'file_secure': PROTECT_CONTENT,
+            'imdb': IMDB,
+            'spell_check': SPELL_CHECK_REPLY,
+            'welcome': MELCOW_NEW_USERS,
+            'template': IMDB_TEMPLATE            
+        }
+        chat = await self.grp.find_one({'id':int(id)})
+        if chat:
+            return chat.get('settings', default)
+        return default
+    async def disable_chat(self, chat, reason="No Reason"):
+        chat_status=dict(
+            is_disabled=True,
+            reason=reason,
+            )
+        await self.grp.update_one({'id': int(chat)}, {'$set': {'chat_status': chat_status}})
+    
+    async def total_chat_count(self):
+        count = await self.grp.count_documents({})
+        return count
+    
+    async def get_all_chats(self):
+        return self.grp.find({})
+    async def get_db_size(self):
+        return (await self.db.command("dbstats"))['dataSize']
+    async def log_search(self, query):
+        await self.queries.insert_one({'query': query.lower(), 'timestamp': datetime.utcnow()})
+    async def get_trending_searches(self, days=7, limit=10):
+        start_date = datetime.utcnow() - timedelta(days=days)
+        pipeline = [
+            {'$match': {'timestamp': {'$gte': start_date}}},
+            {'$group': {'_id': '$query', 'count': {'$sum': 1}}},
+            {'$sort': {'count': -1}},
+            {'$limit': limit}
+        ]
+        return await self.queries.aggregate(pipeline).to_list(length=limit)
+    async def set_ott_message(self, chat_id, message_id):
+        await self.ott.update_one({'_id': 'ott_message_info'}, {'$set': {'chat_id': chat_id, 'message_id': message_id}}, upsert=True)
+    async def get_ott_message(self):
+        return await self.ott.find_one({'_id': 'ott_message_info'})
+        
+    # New functions for handling movie requests
+    async def add_request(self, chat_id, user_id, query):
+        """Saves a movie request to the database."""
+        request = {
+            'chat_id': chat_id,
+            'user_id': user_id,
+            'query': query,
+            'timestamp': datetime.utcnow()
+        }
+        await self.req.insert_one(request)
+    async def get_all_requests(self):
+        """Gets all movie requests from the database."""
+        return self.req.find({}).sort('timestamp', -1)
+    async def delete_all_requests(self):
+        """Clears all movie requests from the database."""
+        await self.req.delete_many({})
+    async def set_index_progress(self, chat_id, last_message_id):
+        """Saves the indexing progress for a chat."""
+        await self.db.index_progress.update_one(
+            {'_id': chat_id},
+            {'$set': {'last_id': last_message_id}},
+            upsert=True
+        )
+    async def get_index_progress(self, chat_id):
+        """Gets the indexing progress for a chat."""
+        progress = await self.db.index_progress.find_one({'_id': chat_id})
+        return progress['last_id'] if progress else 0
+    async def clear_index_progress(self, chat_id):
+        """Clears the indexing progress for a chat."""
+        await self.db.index_progress.delete_one({'_id': chat_id})
+db = Database(DATABASE_URL, DATABASE_NAME)
