@@ -44,7 +44,7 @@ MAX_RIST_BTNS = int(environ.get('MAX_RIST_BTNS', "10"))
 START_MESSAGE = environ.get('START_MESSAGE', script.START_TXT)
 BUTTON_LOCK_TEXT = environ.get("BUTTON_LOCK_TEXT", script.BUTTON_LOCK_TEXT)
 FORCE_SUB_TEXT = environ.get('FORCE_SUB_TEXT', script.FORCE_SUB_TEXT)
-
+AUTO_POST = is_enabled(environ.get('AUTO_POST', "True"), True)
 WELCOM_PIC = environ.get("WELCOM_PIC", "")
 WELCOM_TEXT = environ.get("WELCOM_TEXT", script.WELCOM_TEXT)
 PMFILTER = is_enabled(environ.get('PMFILTER', "True"), True)
@@ -75,9 +75,3 @@ MELCOW_NEW_USERS = is_enabled(environ.get('MELCOW_NEW_USERS', "True"), True)
 PROTECT_CONTENT = is_enabled(environ.get('PROTECT_CONTENT', "False"), False)
 PUBLIC_FILE_STORE = is_enabled(environ.get('PUBLIC_FILE_STORE', "True"), True)
 LOG_MSG = "{} Iꜱ Rᴇsᴛᴀʀᴛᴇᴅ....✨\n\n🗓️ Dᴀᴛᴇ : {}\n⏰ Tɪᴍᴇ : {}\n\n🖥️ Rᴇᴏᴩ: {}\n🉐 Vᴇʀsɪᴏɴ: {}\n🧾 Lɪᴄᴇɴꜱᴇ: {}\n©️ Cᴏᴩʏʀɪɢʜᴛ: {}"
-
-
-
-
-
-
