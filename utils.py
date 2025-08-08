@@ -355,3 +355,35 @@ async def get_ott_releases():
     except Exception as e:
         logger.error(f"Error scraping OTT releases: {e}")
         return "Could not fetch OTT release information at this time."
+
+def detect_language(text):
+    """
+    Detects one or more languages from a file's name or caption based on keywords.
+    """
+    text = text.lower()
+    # Using a set to automatically handle and store unique languages found
+    languages_found = set()
+    
+    # A dictionary mapping various keywords/abbreviations to a standard language name
+    language_map = {
+        "malayalam": "Malayalam", "mal": "Malayalam",
+        "tamil": "Tamil", "tam": "Tamil",
+        "hindi": "Hindi", "hin": "Hindi",
+        "english": "English", "eng": "English",
+        "telugu": "Telugu", "tel": "Telugu",
+        "kannada": "Kannada", "kan": "Kannada"
+    }
+
+    # Find all potential language keywords in the text
+    # This regex looks for words of 3 or more letters
+    potential_keywords = re.findall(r'\b[a-z]{3,}\b', text)
+    
+    for keyword in potential_keywords:
+        if keyword in language_map:
+            languages_found.add(language_map[keyword])
+
+    if languages_found:
+        # Sort the list for consistent output order and join into a string
+        return ", ".join(sorted(list(languages_found)))
+    
+    return "Unknown"
