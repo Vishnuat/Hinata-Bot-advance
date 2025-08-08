@@ -1,13 +1,14 @@
 import logging
 import re
 import asyncio
+from urllib.parse import quote_plus
 from pyrogram import Client, filters, enums
 from pyrogram.errors import FloodWait
 from pyrogram.errors.exceptions.bad_request_400 import ChannelInvalid, ChatAdminRequired, UsernameInvalid, UsernameNotModified
-from info import CHANNELS, ADMINS
+from info import CHANNELS, ADMINS, UPDATE_CHANNEL
 from database.ia_filterdb import Media, unpack_new_file_id
 from pyrogram.types import InlineKeyboardMarkup, InlineKeyboardButton
-from utils import temp
+from utils import temp, detect_language
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
@@ -57,6 +58,37 @@ async def media(bot, message):
     }
 
     file_batch.append(file_doc)
+
+    # New file notification
+    if UPDATE_CHANNEL:
+        try:
+            # Combine file name and caption for language detection
+            text_for_lang_detection = file_doc['file_name']
+            if file_doc['caption']:
+                text_for_lang_detection += " " + file_doc['caption']
+
+            language = detect_language(text_for_lang_detection)
+            notification_text = (
+                "**New File Added**\n\n"
+                f"**File Name:** `{file_doc['file_name']}`\n"
+                f"**Language:** `{language}`"
+            )
+
+            # Create the search button
+            search_query = quote_plus(file_doc['file_name'])
+            button_url = f"https://t.me/{temp.U_NAME}?start=search_{search_query}"
+            buttons = [[
+                InlineKeyboardButton("📥 Download", url=button_url)
+            ]]
+            reply_markup = InlineKeyboardMarkup(buttons)
+
+            await bot.send_message(
+                UPDATE_CHANNEL,
+                notification_text,
+                reply_markup=reply_markup
+            )
+        except Exception as e:
+            logger.error(f"Failed to send new file notification: {e}")
 
     # If the batch is full, save it to the database
     if len(file_batch) >= BATCH_SIZE:
