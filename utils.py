@@ -7,7 +7,7 @@ import aiohttp
 from pyrogram.errors import UserNotParticipant
 from pyrogram.types import Message, InlineKeyboardButton
 from pyrogram import enums
-from info import AUTH_CHANNEL, LONG_IMDB_DESCRIPTION, MAX_LIST_ELM, SHORT_URL, SHORT_API
+from info import ADMINS, AUTH_CHANNEL, LONG_IMDB_DESCRIPTION, MAX_LIST_ELM, SHORT_URL, SHORT_API
 from imdb import Cinemagoer
 from typing import Union, List
 from datetime import datetime, timedelta
@@ -17,7 +17,6 @@ from bs4 import BeautifulSoup
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
 
-# Add these definitions
 __repo__ = "https://github.com/MrMKN/PROFESSOR-BOT"
 __license__ = "AGPL-3.0"
 __copyright__ = "© 2024 MrMKN"
@@ -43,6 +42,19 @@ class temp(object):
     PM_BUTTONS = {}
     PM_SPELL = {}
     GP_SPELL = {}
+
+async def admin_filter(filt, client, message):
+    if not message.from_user:
+        return False
+    if message.from_user.id in ADMINS:
+        return True
+    if message.chat.type == enums.ChatType.PRIVATE:
+        return False
+    try:
+        member = await message.chat.get_member(message.from_user.id)
+        return member.status in [enums.ChatMemberStatus.ADMINISTRATOR, enums.ChatMemberStatus.OWNER]
+    except Exception:
+        return False
 
 async def is_subscribed(bot, query):
     try:
@@ -330,17 +342,6 @@ def extract_time(time_val):
         elif unit == "d":
             return datetime.now() + timedelta(days=int(time_num))
     return None
-
-async def admin_check(message: Message) -> bool:
-    if not message.from_user:
-        return False
-    if message.chat.type not in [enums.ChatType.GROUP, enums.ChatType.SUPERGROUP]:
-        return False
-    if message.from_user.id in [777000, 1087968824]:
-        return True
-    
-    check_status = await message._client.get_chat_member(chat_id=message.chat.id, user_id=message.from_user.id)
-    return check_status.status in [enums.ChatMemberStatus.OWNER, enums.ChatMemberStatus.ADMINISTRATOR]
 
 async def get_ott_releases():
     """
