@@ -9,7 +9,7 @@ from info import CHANNELS, ADMINS, UPDATE_CHANNEL
 from database.ia_filterdb import Media, unpack_new_file_id
 from database.users_chats_db import db
 from pyrogram.types import InlineKeyboardMarkup, InlineKeyboardButton
-from utils import temp, detect_language
+from utils import temp, detect_language, get_settings, save_group_settings
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
@@ -70,7 +70,8 @@ async def media(bot, message):
     file_batch.append(file_doc)
 
     # New file notification
-    if UPDATE_CHANNEL:
+    settings = await get_settings(message.chat.id)
+    if UPDATE_CHANNEL and settings.get('auto_post', True):
         try:
             # Combine file name and caption for language detection
             text_for_lang_detection = file_doc['file_name']
@@ -125,7 +126,7 @@ async def index_files(bot, query):
         pass
     await index_files_to_db(int(lst_msg_id), chat, msg, bot)
 
-@Client.on_message((filters.forwarded | (filters.regex("(https://)?(t\.me/|telegram\.me/|telegram\.dog/)(c/)?(\d+|[a-zA-Z_0_9]+)/(\d+)$")) & filters.text) & filters.private & filters.incoming & filters.user(ADMINS))
+@Client.on_message((filters.forwarded | (filters.regex("(https://)?(t\.me/|telegram\.me/|telegram\.dog/)(c/)?(\d+|[a-zA-Z_0-9]+)/(\d+)$")) & filters.text) & filters.private & filters.incoming & filters.user(ADMINS))
 async def send_for_index(bot, message):
     # Logic to handle index command remains the same
     if message.text:
