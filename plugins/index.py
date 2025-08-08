@@ -7,6 +7,7 @@ from pyrogram.errors import FloodWait
 from pyrogram.errors.exceptions.bad_request_400 import ChannelInvalid, ChatAdminRequired, UsernameInvalid, UsernameNotModified
 from info import CHANNELS, ADMINS, UPDATE_CHANNEL
 from database.ia_filterdb import Media, unpack_new_file_id
+from database.users_chats_db import db
 from pyrogram.types import InlineKeyboardMarkup, InlineKeyboardButton
 from utils import temp, detect_language
 
@@ -18,10 +19,8 @@ lock = asyncio.Lock()
 file_batch = []
 BATCH_SIZE = 200  # Number of files to save in one batch
 
-# --- CHANGE IS HERE ---
 # List of keywords to exclude from indexing
 EXCLUDE_KEYWORDS = ['dvdrip', 'predvd', 'hqclean', 'camrip', 'pre-hd', 'hdts']
-# --- END OF CHANGE ---
 
 
 async def save_file_batch():
@@ -53,12 +52,10 @@ async def media(bot, message):
     file_id, file_ref = unpack_new_file_id(media.file_id)
     file_name = re.sub(r"@\w+|(_|\-|\.|\+)", " ", str(getattr(media, "file_name", "")))
     
-    # --- CHANGE IS HERE ---
     # Check if any of the exclude keywords are in the file name
     if any(keyword in file_name.lower() for keyword in EXCLUDE_KEYWORDS):
         logger.info(f"Skipped file due to excluded keyword: {file_name}")
         return
-    # --- END OF CHANGE ---
 
     file_doc = {
         '_id': file_id,
@@ -183,14 +180,20 @@ async def index_files_to_db(lst_msg_id, chat, msg, bot):
 
     async with lock:
         try:
-            current = temp.CURRENT
+            current = await db.get_index_progress(chat)
+            if current == 0:
+                current = temp.CURRENT
+
             temp.CANCEL = False
-            async for message in bot.iter_messages(chat, lst_msg_id, temp.CURRENT):
+            async for message in bot.iter_messages(chat, lst_msg_id, current):
                 if temp.CANCEL:
+                    await db.set_index_progress(chat, current)
                     break
                 current += 1
+                if current % 20 == 0:
+                    await db.set_index_progress(chat, current)
+                
                 if current % 100 == 0:
-                    # Save the current batch before updating status
                     saved, dup = await save_file_batch()
                     total_files += saved
                     duplicate += dup
@@ -220,16 +223,12 @@ async def index_files_to_db(lst_msg_id, chat, msg, bot):
                     unsupported += 1
                     continue
 
-                # Prepare file document for batching
                 file_id, file_ref = unpack_new_file_id(media.file_id)
                 file_name = re.sub(r"@\w+|(_|\-|\.|\+)", " ", str(getattr(media, "file_name", "")))
                 
-                # --- CHANGE IS HERE ---
-                # Check if any of the exclude keywords are in the file name
                 if any(keyword in file_name.lower() for keyword in EXCLUDE_KEYWORDS):
                     logger.info(f"Skipped file due to excluded keyword: {file_name}")
                     continue
-                # --- END OF CHANGE ---
 
                 file_doc = {
                     '_id': file_id,
@@ -242,7 +241,6 @@ async def index_files_to_db(lst_msg_id, chat, msg, bot):
                 }
                 file_batch.append(file_doc)
 
-                # If batch size is reached, save the batch
                 if len(file_batch) >= BATCH_SIZE:
                     saved, dup = await save_file_batch()
                     total_files += saved
@@ -252,10 +250,11 @@ async def index_files_to_db(lst_msg_id, chat, msg, bot):
             logger.exception(e)
             await msg.edit(f'Error: {e}')
         finally:
-            # Save any remaining files in the batch
             saved, dup = await save_file_batch()
             total_files += saved
             duplicate += dup
+            
+            await db.clear_index_progress(chat)
             
             await msg.edit(f'Successfully Saved `{total_files}` files to the database!\n'
                            f'Duplicate Files Skipped: `{duplicate}`\n'
