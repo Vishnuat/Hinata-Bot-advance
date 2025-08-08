@@ -14,7 +14,7 @@ from pyrogram import Client, types
 from database.users_chats_db import db
 from database.ia_filterdb import Media
 from utils import temp, __repo__, __license__, __copyright__, __version__
-from constants import API_ID, API_HASH, BOT_TOKEN, LOG_CHANNEL, UPTIME, WEB_SUPPORT, Text
+from info import API_ID, API_HASH, BOT_TOKEN, LOG_CHANNEL, UPTIME, WEB_SUPPORT
 
 # --- LOGGING SETUP ---
 logging.config.fileConfig("logging.conf")
