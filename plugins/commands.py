@@ -5,6 +5,8 @@ import base64
 import logging
 import random
 import asyncio
+from urllib.parse import unquote_plus
+from plugins.pm_filter import pm_AutoFilter
 
 from Script import script
 from database.users_chats_db import db
@@ -56,6 +58,16 @@ async def start(client, message):
         )
         return
 
+    data = message.command[1]
+    
+    # Handle search from update channel
+    if data.startswith("search_"):
+        query = unquote_plus(data.split("_", 1)[1])
+        # To reuse pm_AutoFilter, we can modify the message object in-place
+        message.text = query
+        await pm_AutoFilter(client, message)
+        return
+
     if AUTH_CHANNEL and not await is_subscribed(client, message):
         try:
             invite_link = await client.create_chat_invite_link(int(AUTH_CHANNEL))
@@ -94,7 +106,6 @@ async def start(client, message):
         )
         return
 
-    data = message.command[1]
     try:
         pre, file_id = data.split('_', 1)
     except:
