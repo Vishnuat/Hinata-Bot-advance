@@ -30,7 +30,7 @@ Add me to your group and I'll help you manage it! 🚀</b>"""
     ABOUT_TXT = """<b>✨ About Me ✨</b>
 
 - **Name:** {bot}
-- **Developer:** [Mr.MKN TG](https://t.me/Mr_MKN)
+- **Developer:** [VC Movies](https://t.me/VC_Movie)
 - **Language:** Python 3
 - **Framework:** Pyrogram
 - **Database:** MongoDB
@@ -41,8 +41,8 @@ Add me to your group and I'll help you manage it! 🚀</b>"""
 
 You can find the source code for this bot on GitHub.
 
-- **Repository:** [PROFESSOR-BOT](https://github.com/MrMKN/PROFESSOR-BOT)
-- **Developer:** [Mr.MKN TG](https://t.me/Mr_MKN)
+- **Repository:** [Hinata-Bot](https://t.me/VC_Movie)
+- **Developer:** [VC Movies](https://t.me/VC_Movie)
 """
 
     FILE_TXT = """<b>➤ Help For File Store</b>
