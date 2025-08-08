@@ -1,7 +1,7 @@
-
 import motor.motor_asyncio
 from datetime import datetime, timedelta
-from info import DATABASE_NAME, DATABASE_URL, IMDB, IMDB_TEMPLATE, MELCOW_NEW_USERS, P_TTI_SHOW_OFF, SINGLE_BUTTON, SPELL_CHECK_REPLY, PROTECT_CONTENT
+from info import DATABASE_NAME, DATABASE_URL, IMDB, IMDB_TEMPLATE, MELCOW_NEW_USERS, P_TTI_SHOW_OFF, SINGLE_BUTTON, SPELL_CHECK_REPLY, PROTECT_CONTENT, AUTO_POST
+
 class Database:
     
     def __init__(self, uri, database_name):
@@ -12,6 +12,7 @@ class Database:
         self.queries = self.db.search_queries
         self.ott = self.db.ott_message
         self.req = self.db.requests # New collection for requests
+
     def new_user(self, id, name):
         return dict(
             id = id,
@@ -21,6 +22,7 @@ class Database:
                 ban_reason="",
             ),
         )
+
     def new_group(self, id, title, username):
         return dict(
             id = id,
@@ -57,6 +59,7 @@ class Database:
             ban_reason=ban_reason
         )
         await self.col.update_one({'id': user_id}, {'$set': {'ban_status': ban_status}})
+
     async def get_ban_status(self, id):
         default = dict(
             is_banned=False,
@@ -66,13 +69,16 @@ class Database:
         if not user:
             return default
         return user.get('ban_status', default)
+
     async def get_all_users(self):
         return self.col.find({})
     
     async def delete_user(self, user_id):
         await self.col.delete_many({'id': int(user_id)})
+
     async def delete_chat(self, chat_id):
         await self.grp.delete_many({'id': int(chat_id)})
+
     async def get_banned(self):
         users = self.col.find({'ban_status.is_banned': True})
         chats = self.grp.find({'chat_status.is_disabled': True})
@@ -106,12 +112,14 @@ class Database:
             'imdb': IMDB,
             'spell_check': SPELL_CHECK_REPLY,
             'welcome': MELCOW_NEW_USERS,
-            'template': IMDB_TEMPLATE            
+            'template': IMDB_TEMPLATE,
+            'auto_post': AUTO_POST
         }
         chat = await self.grp.find_one({'id':int(id)})
         if chat:
             return chat.get('settings', default)
         return default
+
     async def disable_chat(self, chat, reason="No Reason"):
         chat_status=dict(
             is_disabled=True,
@@ -125,10 +133,13 @@ class Database:
     
     async def get_all_chats(self):
         return self.grp.find({})
+
     async def get_db_size(self):
         return (await self.db.command("dbstats"))['dataSize']
+
     async def log_search(self, query):
         await self.queries.insert_one({'query': query.lower(), 'timestamp': datetime.utcnow()})
+
     async def get_trending_searches(self, days=7, limit=10):
         start_date = datetime.utcnow() - timedelta(days=days)
         pipeline = [
@@ -138,8 +149,10 @@ class Database:
             {'$limit': limit}
         ]
         return await self.queries.aggregate(pipeline).to_list(length=limit)
+
     async def set_ott_message(self, chat_id, message_id):
         await self.ott.update_one({'_id': 'ott_message_info'}, {'$set': {'chat_id': chat_id, 'message_id': message_id}}, upsert=True)
+
     async def get_ott_message(self):
         return await self.ott.find_one({'_id': 'ott_message_info'})
         
@@ -153,12 +166,15 @@ class Database:
             'timestamp': datetime.utcnow()
         }
         await self.req.insert_one(request)
+
     async def get_all_requests(self):
         """Gets all movie requests from the database."""
         return self.req.find({}).sort('timestamp', -1)
+
     async def delete_all_requests(self):
         """Clears all movie requests from the database."""
         await self.req.delete_many({})
+
     async def set_index_progress(self, chat_id, last_message_id):
         """Saves the indexing progress for a chat."""
         await self.db.index_progress.update_one(
@@ -166,11 +182,14 @@ class Database:
             {'$set': {'last_id': last_message_id}},
             upsert=True
         )
+
     async def get_index_progress(self, chat_id):
         """Gets the indexing progress for a chat."""
         progress = await self.db.index_progress.find_one({'_id': chat_id})
         return progress['last_id'] if progress else 0
+
     async def clear_index_progress(self, chat_id):
         """Clears the indexing progress for a chat."""
         await self.db.index_progress.delete_one({'_id': chat_id})
+
 db = Database(DATABASE_URL, DATABASE_NAME)
