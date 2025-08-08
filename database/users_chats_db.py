@@ -1,134 +1,195 @@
-import logging
-from struct import pack
-import re
-import base64
-from pyrogram.file_id import FileId
-from pymongo.errors import DuplicateKeyError
-from umongo import Instance, Document, fields
-from motor.motor_asyncio import AsyncIOMotorClient
-from marshmallow.exceptions import ValidationError
-from info import FILE_DB_URL, FILE_DB_NAME, COLLECTION_NAME, MAX_RIST_BTNS
+import motor.motor_asyncio
+from datetime import datetime, timedelta
+from info import DATABASE_NAME, DATABASE_URL, IMDB, IMDB_TEMPLATE, MELCOW_NEW_USERS, P_TTI_SHOW_OFF, SINGLE_BUTTON, SPELL_CHECK_REPLY, PROTECT_CONTENT, AUTO_POST
 
-logger = logging.getLogger(__name__)
-logger.setLevel(logging.INFO)
+class Database:
+    
+    def __init__(self, uri, database_name):
+        self._client = motor.motor_asyncio.AsyncIOMotorClient(uri)
+        self.db = self._client[database_name]
+        self.col = self.db.users
+        self.grp = self.db.groups
+        self.queries = self.db.search_queries
+        self.ott = self.db.ott_message
+        self.req = self.db.requests # New collection for requests
 
-
-client = AsyncIOMotorClient(FILE_DB_URL)
-db = client[FILE_DB_NAME]
-instance = Instance.from_db(db)
-
-@instance.register
-class Media(Document):
-    file_id = fields.StrField(attribute='_id')
-    file_ref = fields.StrField(allow_none=True)
-    file_name = fields.StrField(required=True)
-    file_size = fields.IntField(required=True)
-    file_type = fields.StrField(allow_none=True)
-    mime_type = fields.StrField(allow_none=True)
-    caption = fields.StrField(allow_none=True)
-
-    class Meta:
-        collection_name = COLLECTION_NAME
-
-
-async def save_file(media):
-    """Saves a file to the database."""
-    file_id, file_ref = unpack_new_file_id(media.file_id)
-    # Sanitize file name for better search results
-    file_name = re.sub(r"@\w+|(_|\-|\.|\+)", " ", str(media.file_name))
-    try:
-        file = Media(
-            file_id=file_id,
-            file_ref=file_ref,
-            file_name=file_name,
-            file_size=media.file_size,
-            file_type=media.file_type,
-            mime_type=media.mime_type
+    def new_user(self, id, name):
+        return dict(
+            id = id,
+            name = name,
+            ban_status=dict(
+                is_banned=False,
+                ban_reason="",
+            ),
         )
-    except ValidationError:
-        logger.exception('Error Occurred While Saving File In Database')
-        return False, 2
-    else:
-        try:
-            await file.commit()
-        except DuplicateKeyError:
-            logger.warning(f"{getattr(media, 'file_name', 'NO FILE NAME')} is already saved in database")
-            return False, 0
-        else:
-            logger.info(f"{getattr(media, 'file_name', 'NO FILE NAME')} is saved in database")
-            return True, 1
 
-
-async def get_search_results(query, file_type=None, max_results=MAX_RIST_BTNS, offset=0, filter=False):
-    """
-    Returns search results from the database using a regex for broad compatibility.
-    """
-    query = query.strip()
-    if not query:
-        return [], '', 0
-
-    # Use regex for a more forgiving search that doesn't rely on a text index.
-    # The 'i' option makes the search case-insensitive.
-    filter_query = {'file_name': {'$regex': re.escape(query), '$options': 'i'}}
-
-    if file_type:
-        filter_query['file_type'] = file_type
-
-    total_results = await Media.collection.count_documents(filter_query)
-    next_offset = offset + max_results
-    if next_offset > total_results:
-        next_offset = ''
-
-    # Find documents. Sorting by relevance isn't possible with regex, but we can find the files.
-    cursor = Media.collection.find(
-        filter_query
-    ).skip(offset).limit(max_results)
-
-    files = await cursor.to_list(length=max_results)
-
-    # Convert the dictionary results back to Media objects for compatibility
-    media_files = [Media.build_from_mongo(file) for file in files]
-
-    return media_files, next_offset, total_results
-
-
-async def get_file_details(query):
-    """Returns the details of a file."""
-    filter = {'file_id': query}
-    cursor = Media.find(filter)
-    filedetails = await cursor.to_list(length=1)
-    return filedetails
-
-
-def encode_file_id(s: bytes) -> str:
-    r = b""
-    n = 0
-    for i in s + bytes([22]) + bytes([4]):
-        if i == 0:
-            n += 1
-        else:
-            if n:
-                r += b"\x00" + bytes([n])
-                n = 0
-            r += bytes([i])
-    return base64.urlsafe_b64encode(r).decode().rstrip("=")
-
-
-def encode_file_ref(file_ref: bytes) -> str:
-    return base64.urlsafe_b64encode(file_ref).decode().rstrip("=")
-
-
-def unpack_new_file_id(new_file_id):
-    """Return file_id, file_ref"""
-    decoded = FileId.decode(new_file_id)
-    file_id = encode_file_id(
-        pack(
-            "<iiqq",
-            int(decoded.file_type),
-            decoded.dc_id,
-            decoded.media_id,
-            decoded.access_hash
+    def new_group(self, id, title, username):
+        return dict(
+            id = id,
+            title = title,
+            username = username,
+            chat_status=dict(
+                is_disabled=False,
+                reason="",
+            ),
         )
-    )
-    file_ref = encode_file_ref(decoded.file_reference)
-    return file_id, file_ref
+    
+    async def add_user(self, id, name):
+        user = self.new_user(id, name)
+        await self.col.insert_one(user)
+    
+    async def is_user_exist(self, id):
+        user = await self.col.find_one({'id':int(id)})
+        return bool(user)
+    
+    async def total_users_count(self):
+        count = await self.col.count_documents({})
+        return count
+    
+    async def remove_ban(self, id):
+        ban_status = dict(
+            is_banned=False,
+            ban_reason=''
+        )
+        await self.col.update_one({'id': id}, {'$set': {'ban_status': ban_status}})
+    
+    async def ban_user(self, user_id, ban_reason="No Reason"):
+        ban_status = dict(
+            is_banned=True,
+            ban_reason=ban_reason
+        )
+        await self.col.update_one({'id': user_id}, {'$set': {'ban_status': ban_status}})
+
+    async def get_ban_status(self, id):
+        default = dict(
+            is_banned=False,
+            ban_reason=''
+        )
+        user = await self.col.find_one({'id':int(id)})
+        if not user:
+            return default
+        return user.get('ban_status', default)
+
+    async def get_all_users(self):
+        return self.col.find({})
+    
+    async def delete_user(self, user_id):
+        await self.col.delete_many({'id': int(user_id)})
+
+    async def delete_chat(self, chat_id):
+        await self.grp.delete_many({'id': int(chat_id)})
+
+    async def get_banned(self):
+        users = self.col.find({'ban_status.is_banned': True})
+        chats = self.grp.find({'chat_status.is_disabled': True})
+        b_chats = [chat['id'] async for chat in chats]
+        b_users = [user['id'] async for user in users]
+        return b_users, b_chats
+    
+    async def add_chat(self, chat, title, username):
+        chat = self.new_group(chat, title, username)
+        await self.grp.insert_one(chat)
+    
+    async def get_chat(self, chat):
+        chat = await self.grp.find_one({'id':int(chat)})
+        return False if not chat else chat.get('chat_status')
+    
+    async def re_enable_chat(self, id):
+        chat_status=dict(
+            is_disabled=False,
+            reason="",
+            )
+        await self.grp.update_one({'id': int(id)}, {'$set': {'chat_status': chat_status}})
+        
+    async def update_settings(self, id, settings):
+        await self.grp.update_one({'id': int(id)}, {'$set': {'settings': settings}})
+        
+    async def get_settings(self, id):       
+        default = {
+            'button': SINGLE_BUTTON,
+            'botpm': P_TTI_SHOW_OFF,
+            'file_secure': PROTECT_CONTENT,
+            'imdb': IMDB,
+            'spell_check': SPELL_CHECK_REPLY,
+            'welcome': MELCOW_NEW_USERS,
+            'template': IMDB_TEMPLATE,
+            'auto_post': AUTO_POST
+        }
+        chat = await self.grp.find_one({'id':int(id)})
+        if chat:
+            return chat.get('settings', default)
+        return default
+
+    async def disable_chat(self, chat, reason="No Reason"):
+        chat_status=dict(
+            is_disabled=True,
+            reason=reason,
+            )
+        await self.grp.update_one({'id': int(chat)}, {'$set': {'chat_status': chat_status}})
+    
+    async def total_chat_count(self):
+        count = await self.grp.count_documents({})
+        return count
+    
+    async def get_all_chats(self):
+        return self.grp.find({})
+
+    async def get_db_size(self):
+        return (await self.db.command("dbstats"))['dataSize']
+
+    async def log_search(self, query):
+        await self.queries.insert_one({'query': query.lower(), 'timestamp': datetime.utcnow()})
+
+    async def get_trending_searches(self, days=7, limit=10):
+        start_date = datetime.utcnow() - timedelta(days=days)
+        pipeline = [
+            {'$match': {'timestamp': {'$gte': start_date}}},
+            {'$group': {'_id': '$query', 'count': {'$sum': 1}}},
+            {'$sort': {'count': -1}},
+            {'$limit': limit}
+        ]
+        return await self.queries.aggregate(pipeline).to_list(length=limit)
+
+    async def set_ott_message(self, chat_id, message_id):
+        await self.ott.update_one({'_id': 'ott_message_info'}, {'$set': {'chat_id': chat_id, 'message_id': message_id}}, upsert=True)
+
+    async def get_ott_message(self):
+        return await self.ott.find_one({'_id': 'ott_message_info'})
+        
+    # New functions for handling movie requests
+    async def add_request(self, chat_id, user_id, query):
+        """Saves a movie request to the database."""
+        request = {
+            'chat_id': chat_id,
+            'user_id': user_id,
+            'query': query,
+            'timestamp': datetime.utcnow()
+        }
+        await self.req.insert_one(request)
+
+    async def get_all_requests(self):
+        """Gets all movie requests from the database."""
+        return self.req.find({}).sort('timestamp', -1)
+
+    async def delete_all_requests(self):
+        """Clears all movie requests from the database."""
+        await self.req.delete_many({})
+
+    async def set_index_progress(self, chat_id, last_message_id):
+        """Saves the indexing progress for a chat."""
+        await self.db.index_progress.update_one(
+            {'_id': chat_id},
+            {'$set': {'last_id': last_message_id}},
+            upsert=True
+        )
+
+    async def get_index_progress(self, chat_id):
+        """Gets the indexing progress for a chat."""
+        progress = await self.db.index_progress.find_one({'_id': chat_id})
+        return progress['last_id'] if progress else 0
+
+    async def clear_index_progress(self, chat_id):
+        """Clears the indexing progress for a chat."""
+        await self.db.index_progress.delete_one({'_id': chat_id})
+
+db = Database(DATABASE_URL, DATABASE_NAME)
