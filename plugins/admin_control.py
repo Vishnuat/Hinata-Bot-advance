@@ -2,14 +2,15 @@ from pyrogram import Client, filters, enums
 from pyrogram.errors import ChatAdminRequired
 from pyrogram.types import Message, InlineKeyboardButton, InlineKeyboardMarkup, CallbackQuery
 from pyrogram.errors.exceptions.bad_request_400 import MessageTooLong, PeerIdInvalid, UserNotParticipant, MediaEmpty, PhotoInvalidDimensions, WebpageMediaEmpty
-
-from info import ADMINS, LOG_CHANNEL, SUPPORT_CHAT, WELCOM_PIC, WELCOM_TEXT, IMDB_TEMPLATE
-from utils import get_size, temp, extract_user, get_file_id, get_poster, humanbytes
+from info import ADMINS, LOG_CHANNEL, SUPPORT_CHAT, WELCOM_PIC, WELCOM_TEXT, IMDB_TEMPLATE, UPDATE_CHANNEL
+from utils import get_size, temp, extract_user, get_file_id, get_poster, humanbytes, detect_language
 from database.users_chats_db import db
 from database.ia_filterdb import Media
 from datetime import datetime
 from Script import script
 import logging, re, asyncio, time, shutil, psutil, os, sys
+from urllib.parse import quote_plus
+
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.ERROR)
@@ -386,8 +387,52 @@ async def update_gitpull(client, message):
         os.execl(sys.executable, sys.executable, *sys.argv)
     except Exception as e:
         await message.reply(e)
-
         
+@Client.on_message(filters.command('postup') & filters.user(ADMINS))
+async def postup_command(client, message):
+    if not message.reply_to_message:
+        return await message.reply("Reply to a file to post an update.")
 
+    replied_message = message.reply_to_message
+    file = get_file_id(replied_message)
 
+    if not file:
+        return await message.reply("The replied message is not a supported file type.")
 
+    file_name = getattr(file, "file_name", "Unknown File")
+
+    # Clean the file name for a better search query
+    cleaned_file_name = re.sub(r"@\w+|(_|\-|\.|\+)", " ", file_name)
+
+    # Detect language from file name and caption
+    caption = getattr(replied_message, 'caption', '') or ""
+    text_for_lang_detection = cleaned_file_name + " " + caption
+    language = detect_language(text_for_lang_detection)
+
+    # Construct the notification message and button
+    notification_text = (
+        "**New File Added**\n\n"
+        f"**File Name:** `{cleaned_file_name}`\n"
+        f"**Language:** `{language}`"
+    )
+
+    search_query = quote_plus(cleaned_file_name)
+    button_url = f"https://t.me/{temp.U_NAME}?start=search_{search_query}"
+    buttons = [[
+        InlineKeyboardButton("📥 Download", url=button_url)
+    ]]
+    reply_markup = InlineKeyboardMarkup(buttons)
+
+    # Send the notification to the update channel
+    if UPDATE_CHANNEL:
+        try:
+            await client.send_message(
+                UPDATE_CHANNEL,
+                notification_text,
+                reply_markup=reply_markup
+            )
+            await message.reply("✅ Update posted successfully to the update channel.")
+        except Exception as e:
+            await message.reply(f"❌ Failed to post update. Error: {e}")
+    else:
+        await message.reply("UPDATE_CHANNEL is not configured. Please set it in your environment variables.")
