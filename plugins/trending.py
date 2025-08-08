@@ -68,7 +68,7 @@ async def set_ott_command(client, message):
         ]
         
         await client.edit_message_text(
-            chat_idid=ott_message_info['chat_id'],
+            chat_id=ott_message_info['chat_id'],
             message_id=ott_message_info['message_id'],
             text=new_text,
             reply_markup=InlineKeyboardMarkup(buttons)
