@@ -174,4 +174,21 @@ class Database:
         """Clears all movie requests from the database."""
         await self.req.delete_many({})
 
+    async def set_index_progress(self, chat_id, last_message_id):
+        """Saves the indexing progress for a chat."""
+        await self.db.index_progress.update_one(
+            {'_id': chat_id},
+            {'$set': {'last_id': last_message_id}},
+            upsert=True
+        )
+
+    async def get_index_progress(self, chat_id):
+        """Gets the indexing progress for a chat."""
+        progress = await self.db.index_progress.find_one({'_id': chat_id})
+        return progress['last_id'] if progress else 0
+
+    async def clear_index_progress(self, chat_id):
+        """Clears the indexing progress for a chat."""
+        await self.db.index_progress.delete_one({'_id': chat_id})
+
 db = Database(DATABASE_URL, DATABASE_NAME)
