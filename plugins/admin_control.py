@@ -436,3 +436,25 @@ async def postup_command(client, message):
             await message.reply(f"❌ Failed to post update. Error: {e}")
     else:
         await message.reply("UPDATE_CHANNEL is not configured. Please set it in your environment variables.")
+
+@Client.on_message(filters.command('autopost') & filters.user(ADMINS))
+async def autopost_command(client, message):
+    if len(message.command) != 2:
+        return await message.reply("Please use the format: `/autopost on` or `/autopost off`")
+
+    status = message.command[1].lower()
+    chat_id = message.chat.id
+    settings = await get_settings(chat_id)
+
+    if status == "on":
+        if settings.get('auto_post') is True:
+            return await message.reply("Auto Post is already enabled.")
+        await save_group_settings(chat_id, 'auto_post', True)
+        await message.reply("Auto Post has been enabled.")
+    elif status == "off":
+        if settings.get('auto_post') is False:
+            return await message.reply("Auto Post is already disabled.")
+        await save_group_settings(chat_id, 'auto_post', False)
+        await message.reply("Auto Post has been disabled.")
+    else:
+        await message.reply("Invalid status. Please use `on` or `off`.")
