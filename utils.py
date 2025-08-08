@@ -17,6 +17,12 @@ from bs4 import BeautifulSoup
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
 
+# Add these definitions
+__repo__ = "https://github.com/MrMKN/PROFESSOR-BOT"
+__license__ = "AGPL-3.0"
+__copyright__ = "© 2024 MrMKN"
+__version__ = "4.6"
+
 BTN_URL_REGEX = re.compile(r"(\[([^\[]+?)\]\((buttonurl|buttonalert):(?:/{0,2})(.+?)(:same)?\))")
 BANNED = {}
 SMART_OPEN = '“'
