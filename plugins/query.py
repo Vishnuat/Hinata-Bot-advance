@@ -269,7 +269,7 @@ async def cb_handler(client: Client, query: CallbackQuery):
         buttons = [
             [InlineKeyboardButton("➕️ Add Me To Your Chat ➕", url=f"http://t.me/{temp.U_NAME}?startgroup=true")],
             [InlineKeyboardButton("Search 🔎", switch_inline_query_current_chat=''),
-             InlineKeyboardButton("Channel 🔈", url="https://t.me/mkn_bots_updates")],
+             InlineKeyboardButton("Channel 🔈", url="https://t.me/VC_Movie")],
             [InlineKeyboardButton("Help 🕸️", callback_data="help"),
              InlineKeyboardButton("About ✨", callback_data="about")]
         ]
@@ -311,7 +311,7 @@ async def cb_handler(client: Client, query: CallbackQuery):
 
     elif query.data == "source":
         buttons = [
-            [InlineKeyboardButton('Source Code', url='https://github.com/MrMKN/PROFESSOR-BOT')],
+            [InlineKeyboardButton('Source Code', url='https://t.me/VC_Movie')],
             [InlineKeyboardButton('‹ Back', 'about')]
         ]
         await query.edit_message_media(
