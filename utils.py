@@ -50,7 +50,7 @@ async def admin_check(message: Message) -> bool:
         return True
     if message.chat.type not in [enums.ChatType.GROUP, enums.ChatType.SUPERGROUP]:
         return False
-    if message.from_user.id in [777000, 1087968824]:
+    if message.from_user.id in [777000, 1087968824]: # Anonymous Admin
         return True
     
     try:
@@ -254,7 +254,7 @@ def split_quotes(text: str) -> List:
 
 def parser(text, keyword, cb_data):
     if "buttonalert" in text:
-        text = (text.replace("\n", "\\n").replace("\t", "\\t"))
+        text = (text.replace("\n", "\\n").replace("\t", "\t"))
     buttons = []
     note_data = ""
     prev = 0
