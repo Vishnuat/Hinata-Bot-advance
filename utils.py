@@ -43,18 +43,24 @@ class temp(object):
     PM_SPELL = {}
     GP_SPELL = {}
 
-async def admin_filter(filt, client, message):
+async def admin_check(message: Message) -> bool:
     if not message.from_user:
         return False
     if message.from_user.id in ADMINS:
         return True
-    if message.chat.type == enums.ChatType.PRIVATE:
+    if message.chat.type not in [enums.ChatType.GROUP, enums.ChatType.SUPERGROUP]:
         return False
+    if message.from_user.id in [777000, 1087968824]:
+        return True
+    
     try:
-        member = await message.chat.get_member(message.from_user.id)
-        return member.status in [enums.ChatMemberStatus.ADMINISTRATOR, enums.ChatMemberStatus.OWNER]
+        check_status = await message.chat.get_member(user_id=message.from_user.id)
+        return check_status.status in [enums.ChatMemberStatus.OWNER, enums.ChatMemberStatus.ADMINISTRATOR]
     except Exception:
         return False
+
+async def admin_filter(filt, client, message):
+    return await admin_check(message)
 
 async def is_subscribed(bot, query):
     try:
