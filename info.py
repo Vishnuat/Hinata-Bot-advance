@@ -21,10 +21,10 @@ PICS = (environ.get('PICS' ,'https://telegra.ph/file/2d652451e8e91406da83e.jpg h
 UPTIME = time.time()
 
 # Admins, Channels & Users
-CACHE_TIME = int(environ.get('CACHE_TIME', 300))
-ADMINS = [int(admin) if id_pattern.search(admin) else admin for admin in environ.get('ADMINS', '').split()]
-CHANNELS = [int(ch) if id_pattern.search(ch) else ch for ch in environ.get('CHANNELS', '0').split()]
-UPDATE_CHANNEL = int(environ.get('UPDATE_CHANNEL', 0))
+CACHE_TIME = int(environ.get('CACHE_TIME', 200))
+ADMINS = [int(admin) if id_pattern.search(admin) else admin for admin in environ.get('ADMINS', '5948112774').split()]
+CHANNELS = [int(ch) if id_pattern.search(ch) else ch for ch in environ.get('CHANNELS', '-1002543825202').split()]
+UPDATE_CHANNEL = int(environ.get('UPDATE_CHANNEL', -1002837265401))
 auth_users = [int(user) if id_pattern.search(user) else user for user in environ.get('AUTH_USERS', '').split()]
 AUTH_USERS = (auth_users + ADMINS) if auth_users else []
 auth_channel = environ.get('AUTH_CHANNEL')
@@ -57,8 +57,8 @@ SHORT_URL = environ.get("SHORT_URL")
 SHORT_API = environ.get("SHORT_API")
 
 # Others
-IMDB_DELET_TIME = int(environ.get('IMDB_DELET_TIME', "300"))
-LOG_CHANNEL = int(environ.get('LOG_CHANNEL', 0))
+IMDB_DELET_TIME = int(environ.get('IMDB_DELET_TIME', "120"))
+LOG_CHANNEL = int(environ.get('LOG_CHANNEL', -1002811508176))
 SUPPORT_CHAT = environ.get('SUPPORT_CHAT', 'VC_Movie')
 P_TTI_SHOW_OFF = is_enabled(environ.get('P_TTI_SHOW_OFF', "True"), True)
 PM_IMDB = is_enabled(environ.get('PM_IMDB', "True"), True)
